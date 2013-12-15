@@ -1,0 +1,27 @@
+{
+    "video": {
+        "resolution": [ 640, 480 ],
+        "fullscreen": false,
+        "flip-interval": 1,
+        "refresh-rate": 60
+    },
+    "audio": {
+        "sample-rate": 44100,
+        "frame-rate": 512,
+        "fft": {
+            "bars": 512,
+            "fade": 0.1
+        }
+    },
+    "gui": {
+        "scroll-delay": 2
+    },
+    "player": {
+        "P1": {
+            "autoplay": false,
+            "map-7K": "sdf jkl",
+            "map-9K": "asdf jkl;",
+            "speedx": 4.0
+        }
+    }
+}

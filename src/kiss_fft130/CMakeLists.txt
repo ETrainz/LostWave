@@ -1,0 +1,1 @@
+add_library(kiss_fft STATIC kiss_fft.c kiss_fftr.c)

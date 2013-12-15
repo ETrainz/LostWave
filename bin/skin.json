@@ -1,0 +1,44 @@
+{
+    "theme": {
+        "FFT_Base": [ 32, 64, 192, 32 ],
+        "FFT_Peak": [ "white", 127 ],
+
+        "music-selector": {
+            "size": 14,
+            "base-offset": [ 16, 16 ],
+            "active-element-offset": [ 0, 46 ],
+            "inactive-element-offset": [ 0, 32 ],
+
+            "active-artist-offset": [ 0, 8 ],
+            "active-artist-font": { "typeface": "Serif", "height": 14, "weight": 700, "italic": true },
+            "active-title-offset": [ 0, 34 ],
+            "active-title-font": { "typeface": "Serif", "height": 36 },
+
+            "inactive-artist-offset": [ 0, 8 ],
+            "inactive-artist-font": { "typeface": "Sans", "height": 11 },
+            "inactive-title-offset": [ 0, 20 ],
+            "inactive-title-font": { "typeface": "Sans", "height": 16 },
+
+            "selected-genre-offset": [ 400, 100 ],
+            "selected-artist-offset": [ 400, 120 ],
+            "selected-title-offset": [ 400, 160 ],
+            "selected-notecharter-offset": [ 400, 180 ],
+            "selected-difficulty-offset": [ 500, 300 ],
+            "selected-tempo-offset": [ 500, 320 ],
+
+            "selected-head-font": { "typeface": "Serif", "height": 44, "weight": 700 },
+            "selected-body-font": { "typeface": "Serif", "height": 18 }
+        },
+
+        "play-1p": {
+            "KEY1": [ 0.36, 0.00, 0.40, 1.00 ],
+            "KEY2": [ 0.40, 0.00, 0.44, 1.00 ],
+            "KEY3": [ 0.44, 0.00, 0.48, 1.00 ],
+            "KEY4": [ 0.48, 0.00, 0.52, 1.00 ],
+            "KEY5": [ 0.52, 0.00, 0.56, 1.00 ],
+            "KEY6": [ 0.56, 0.00, 0.60, 1.00 ],
+            "KEY7": [ 0.60, 0.00, 0.64, 1.00 ]
+        }
+
+    },
+}
