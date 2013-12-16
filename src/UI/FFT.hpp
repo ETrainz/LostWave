@@ -32,7 +32,6 @@ private:
 
 protected:
     float   mDecayPeriod;   // decay over time
-    ulong   mFudgeFrames;   // number of FFT output frames offset so that the visualization starts from 20Hz
 
     ulong   mBands;     // number of bands to show
     float*  mBandX;     // linear to logarithmic table

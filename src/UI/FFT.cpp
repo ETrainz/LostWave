@@ -78,10 +78,6 @@ void FFT::setSampleRate(ulong rate)
     mDecayPeriod =
         (2.0f * static_cast<float>(mFrames))
         / (mFade * static_cast<float>(rate));
-
-    mFudgeFrames =
-        std::ceil(static_cast<float>(rate) / static_cast<float>(mFrames))
-        / 18.0f;
 }
 
 void FFT::set_bands(ulong n)
@@ -97,7 +93,7 @@ void FFT::set_bands(ulong n)
 
     for(ulong i = 0; i <= n; ++i)
         mBandX[i] = powf(
-                        static_cast<float>(mFrames / 2 - mFudgeFrames),
+                        static_cast<float>(mFrames / 2),
                         static_cast<float>(i) / static_cast<float>(n)
                     ) - 0.5f;
 
@@ -162,48 +158,51 @@ void FFT::update(awe::AfBuffer const& buffer)
 {
     std::lock_guard<std::mutex> lock(mMutex);
 
-    calc_FFT(buffer);
-
-    for(ulong i = 0; i < mBands; i++)
+    if (is_enabled())
     {
-        unsigned a = ceil (mBandX[i  ]);
-        unsigned b = floor(mBandX[i+1]);
-        unsigned c = a + 1 + mFudgeFrames;
-        unsigned d = b + 1 + mFudgeFrames;
+        calc_FFT(buffer);
 
-        float nl = 0, nr = 0;
+        for(ulong i = 0; i < mBands; i++)
+        {
+            unsigned a = ceil (mBandX[i  ]);
+            unsigned b = floor(mBandX[i+1]);
+            unsigned c = a + 1;
+            unsigned d = b + 1;
 
-        if (b < a) {
-            nl += mOutput[d*2  ] * (mBandX[i+1] - mBandX[i]),
-                  nr += mOutput[d*2+1] * (mBandX[i+1] - mBandX[i]);
-        } else {
-            if (a > 0)
-                nl += mOutput[(c-1)*2  ] * (a - mBandX[i]),
-                      nr += mOutput[(c  )*2-1] * (a - mBandX[i]);
+            float nl = 0, nr = 0;
 
-            for (; a < b; a++)
-                nl += mOutput[c*2  ],
-                      nr += mOutput[c*2+1];
+            if (b < a) {
+                nl += mOutput[d*2  ] * (mBandX[i+1] - mBandX[i]),
+                      nr += mOutput[d*2+1] * (mBandX[i+1] - mBandX[i]);
+            } else {
+                if (a > 0)
+                    nl += mOutput[(c-1)*2  ] * (a - mBandX[i]),
+                          nr += mOutput[(c  )*2-1] * (a - mBandX[i]);
 
-            if (b < mBands)
-                nl += mOutput[d*2  ] * (mBandX[i+1] - b),
-                      nr += mOutput[d*2+1] * (mBandX[i+1] - b);
+                for (; a < b; a++)
+                    nl += mOutput[c*2  ],
+                          nr += mOutput[c*2+1];
+
+                if (b < mBands)
+                    nl += mOutput[d*2  ] * (mBandX[i+1] - b),
+                          nr += mOutput[d*2+1] * (mBandX[i+1] - b);
+            }
+
+            if (nl > 0)
+                nl = powf(nl, 1.0f/3.0f) * 48.0f;
+            else
+                nl = 0.0f;
+
+            if (nr > 0)
+                nr = powf(nr, 1.0f/3.0f) * 48.0f;
+            else
+                nr = 0.0f;
+
+            float Ol = mSpectrum[i*2  ];
+            float Or = mSpectrum[i*2+1];
+            mSpectrum[i*2  ] = Ol - Ol * mDecayPeriod + nl * mDecayPeriod;
+            mSpectrum[i*2+1] = Or - Or * mDecayPeriod + nr * mDecayPeriod;
         }
-
-        if (nl > 0)
-            nl = powf(nl, 1.0f/3.0f) * 48.0f;
-        else
-            nl = 0.0f;
-
-        if (nr > 0)
-            nr = powf(nr, 1.0f/3.0f) * 48.0f;
-        else
-            nr = 0.0f;
-
-        float Ol = mSpectrum[i*2  ];
-        float Or = mSpectrum[i*2+1];
-        mSpectrum[i*2  ] = Ol - Ol * mDecayPeriod + nl * mDecayPeriod;
-        mSpectrum[i*2+1] = Or - Or * mDecayPeriod + nr * mDecayPeriod;
     }
 }
 
@@ -213,15 +212,18 @@ void FFT::render(clan::Canvas &canvas, recti const &clip_rect)
 {
     std::lock_guard<std::mutex> lock(mMutex);
 
-    clan::ColorHSVf color(0.0f, 1.0f, 1.0f, 0.1f);
-    float inc = 270.0f / mBands;
-    for(ulong i = 0; i < mBands; ++i)
+    if (is_enabled())
     {
-        color.h += inc;
-        rectf out  = mRects[i];
-        out.left  -= mSpectrum[i*2  ];
-        out.right += mSpectrum[i*2+1];
-        canvas.fill_rect(out, color);
+        clan::ColorHSVf color(0.0f, 1.0f, 1.0f, 0.1f);
+        float inc = 270.0f / mBands;
+        for(ulong i = 0; i < mBands; ++i)
+        {
+            color.h += inc;
+            rectf out  = mRects[i];
+            out.left  -= mSpectrum[i*2  ];
+            out.right += mSpectrum[i*2+1];
+            canvas.fill_rect(out, color);
+        }
     }
 }
 
