@@ -37,12 +37,11 @@ long Chart::compare_ticks(const TTime &a, const TTime &b) const
 
 double Chart::translate(const TTime &t) const
 {
-    TTime time  = _0TTime;
     double ret = 0.0;
 
     double BPM = tempo;
     ulong Tcount = 0;
-    TTime prevTC = _0TTime;
+    TTime prevTC = TTime();
 
     // Gather all relevant parameter events from beginning to end.
     for(unsigned int i = 0; i <= t.measure; i++)

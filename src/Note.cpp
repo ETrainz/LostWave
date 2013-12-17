@@ -267,25 +267,93 @@ void Note_Long::update(UI::Tracker const &tracker, KeyStatus const &stat)
     }
 }
 
-
-// TODO This does not work in most cases.
+/*! Connects two lists of notes to a list of long notes.
+ *
+ * This function assumes that all notes being sent into this function
+ * have the same key.
+ *
+ * This function will attempt to fix erroneous long note sequences.
+ * The fixes are based on the following conditions:
+ * - A HOLD note MUST be located before a RELEASE note.
+ * - Both ends of the long notes MUST have identical Sample IDs, except
+ *   in the case of BMS's LN_TYPE 1 mode.
+ * - Switching between HOLD notes and NORMAL notes are allowed because 
+ *   they both make sounds.
+ * - Deletion of RELEASE notes are allowed because they do not make any sound.
+ */
 NoteList zip_key(SingleNoteList H, SingleNoteList R)
 {
     NoteList L;
 
-    while((!H.empty()) && (!R.empty()))
+    while(!H.empty())
     {
-        SingleNoteList::iterator
-            h = H.begin(), r = R.begin();
-        Note_Single
-            *hn = *h, *rn = *r;
+        if (R.empty())
+        {
+            clan::Console::write_line("Note [debug] Converting lone HOLD to NORMAL.");
+            L.push_back(*(H.begin()));
+            H.erase(H.begin());
+        } else {
+            SingleNoteList::iterator
+                h = H.begin(), r = R.begin();
+            Note_Single
+                *hn = *h, *rn = *r;
 
-        if (hn->getTime() > rn->getTime())
-            throw std::runtime_error("Bad chart.");
+            ////    CHECK AND FIX NOTES    ////////////////////////////
+            // TODO Put note checking logic into a class.
+            bool errTime = hn->getTime()     >  rn->getTime();
+            bool errSmpl = hn->getSampleID() != rn->getSampleID();
 
-        L.push_back(new Note_Long(*hn, *rn, hn->getVol(), hn->getPan()));
-        H.erase(h); delete hn;
-        R.erase(r); delete rn;
+            if (hn->getTime() == rn->getTime()) {
+                clan::Console::write_line("Note [debug] Bad long note: Instant RELEASE.");
+                clan::Console::write_line("     [---->] Deleting RELEASE.");
+
+                if (errSmpl)
+                    clan::Console::write_line("     [---->] Note: It has mis-matched samples.");
+
+                R.erase(r); delete rn;
+                continue;
+            }
+
+            if (errTime)
+            {
+                clan::Console::write_line("Note [debug] Bad long note: Invalid time.");
+                clan::Console::write_line("     [---->] Deleting RELEASE.");
+
+                if (errSmpl)
+                    clan::Console::write_line("     [---->] Note: It has mis-matched samples.");
+
+                // TODO If the note before `r` is a NORMAL note with the same sample ID,
+                //      one may change the type of that NORMAL note to HOLD. But we don't
+                //      have access to any NORMAL notes.
+                R.erase(r); delete rn;
+                continue;
+            }
+
+            if (errSmpl)
+            {
+                clan::Console::write_line("Note [debug] Bad long note: Sound mismatch.");
+
+                SingleNoteList::iterator t = h;
+                if ((++t) != H.end())
+                {
+                    if ((*t)->getTime() < rn->getTime())
+                    {
+                        clan::Console::write_line("     [---->] Converting HOLD to NORMAL since the next hold note can fit.");
+                        L.push_back(hn);
+                        H.erase(h);
+                        continue;
+                    }
+                }
+
+                clan::Console::write_line("     [---->] Deleting RELEASE.");
+                R.erase(r); delete rn;
+                continue;
+            }
+
+            L.push_back(new Note_Long(*hn, *rn, hn->getVol(), hn->getPan()));
+            H.erase(h); delete hn;
+            R.erase(r); delete rn;
+        }
     }
 
     return L;
