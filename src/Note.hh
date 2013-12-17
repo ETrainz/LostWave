@@ -26,8 +26,23 @@ enum class ENKey : uint8_t
     NOTE_P2_S = 0x20, NOTE_P2_1 = 0x21, NOTE_P2_2 = 0x22, NOTE_P2_3 = 0x23,
     NOTE_P2_4 = 0x24, NOTE_P2_5 = 0x25, NOTE_P2_6 = 0x26, NOTE_P2_7 = 0x27,
     NOTE_P2_8 = 0x28, NOTE_P2_9 = 0x29,
-    NOTE_AUTO = 0x30
+    NOTE_AUTO = 0x30, NOTE_BG   = 0x40
 };
+
+inline bool  ENKey_isAutoPlay(ENKey const &key) {
+    return static_cast<uint8_t>(key) >= static_cast<uint8_t>(ENKey::NOTE_AUTO);
+}
+
+inline bool  ENKey_isBG(ENKey const &key) {
+    return static_cast<uint8_t>(key) >= static_cast<uint8_t>(ENKey::NOTE_BG);
+}
+
+inline ENKey ENKey_toBG(uint8_t const &key) {
+    return static_cast<ENKey>(
+        static_cast<uint8_t>(ENKey::NOTE_BG)
+        + key % 192 // Wrap to BG range (0x40 to 0xFF)
+    );
+}
 
 typedef std::list<ENKey> KeyList;
 typedef std::set <ENKey> KeySet;
@@ -35,35 +50,30 @@ typedef std::set <ENKey> KeySet;
 /** Base class for all note classes */
 class Note
 {
+private:
+    ENKey   mKey;  //! The key of the note.
+    TTime   mTime; //! The position of the note in tick-base time.
+
 protected:
-    ENKey   key;
-    TTime   time;   // real position in tick-base time
-    long    tick;   // post-initialisation calculated position
-    bool    dead;
-    JScore  score;
+    long    mTick; //! Tick position after chart instantiation.
+    JScore  mScore;//! Note score.
+    bool    mDead; //! Should this note still be updated?
 
 public:
-    static AudioManager* am;
+    static AudioManager *am;
 
-    Note (ENKey Key, TTime Time) : key(Key), time(Time), tick(0), dead(false), score(JScore_NONE) { }
-    virtual ~Note() { }
+    Note(ENKey const &key, TTime const &time) : mKey(key), mTime(time), mTick(-1), mScore(), mDead(false) { }
 
-    inline const ENKey  & getKey  () const { return key; }
-    inline const TTime  & getTime () const { return time; }
-    inline const long   & getTick () const { return tick; }
-    inline const JScore & getScore() const { return score; }
-    inline       bool     isScored() const { return score.rank != EJRank::NONE; }
-    inline const bool   & isDead  () const { return dead; }
+    inline const ENKey  & getKey   () const { return mKey; }
+    inline const TTime  & getTime  () const { return mTime; }
+    inline const long   & getTick  () const { return mTick; }
+    inline const JScore & getScore () const { return mScore; }
+    inline       bool      isScored() const { return mScore.rank != EJRank::NONE; }
+    inline const bool   &  isDead  () const { return mDead; }
 
-    virtual void init  (UI::Tracker const &t) = 0;
-    virtual void render(UI::Tracker const &t, clan::Canvas &canvas) const = 0;
-
-    /**
-     * Note scoring update function.
-     * @return true to make main code remove this note from judgement context.
-     */
-    virtual void update(UI::Tracker const &t, KeyStatus const &key) = 0;
-
+    virtual void init  (UI::Tracker const &) = 0;
+    virtual void render(UI::Tracker const &, clan::Canvas&) const = 0;
+    virtual void update(UI::Tracker const &, const KeyStatus&) = 0;
 };
 
 typedef std::list<Note*> NoteList;
@@ -85,7 +95,7 @@ inline bool cmpNote_Greater(const Note * const &a, const Note * const &b)
 }
 
 template<class NoteType>
-    std::map<ENKey, std::list<NoteType*>>
+    std::map< ENKey, std::list<NoteType*> >
 split_notes_by_key(
         const std::list< NoteType* >& list
         )

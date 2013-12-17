@@ -279,7 +279,7 @@ void Tracker::loop_Notes(NoteList &notes, uint &cache)
 
             if (note->isScored() == false)
             {
-                if (note->getKey() == ENKey::NOTE_AUTO ||
+                if (ENKey_isAutoPlay(note->getKey()) ||
                     mAutoKeys.find(note->getKey()) != mAutoKeys.end()
                         ) {
                     if (note->getTime() <= mTime)

@@ -272,14 +272,15 @@ void Chart_BMS::load_chart()
 11 to 17 : Object Channel of 1 player side
 21 to 27 : Object Channel of 2 player side
 */
-        if (ch ==  3) { // BPM Change >> Read as uchar
+        if (ch == 3) { // BPM Change >> Read as uchar
             // BM98: This channel always uses 2-character hexadecimal >> uint.
             uint factor = m->getTickCount() / (data.size() / 2);
 
             for(size_t i=0; i<data.size() / 2; ++i)
             {
                 uint bpm = clan::StringHelp::text_to_uint(data.substr(i*2, 2), 16);
-                if (bpm != 0) {
+                if (bpm != 0)
+                {
                     TTime time = m->getTimeFromTickCount(i*factor); time.measure = mn;
                     ParamEvent* p = new ParamEvent(time, EParam::EP_C_TEMPO, double(bpm));
                     m->addParamEvent(p);
@@ -292,9 +293,9 @@ void Chart_BMS::load_chart()
                           );
                 }
             }
-        } else if (ch ==  4 || ch ==  6 || ch ==  7) { // TODO Implement BGA
+        } else if (ch == 4 || ch == 6 || ch == 7) { // TODO Implement BGA
 
-        } else if (ch ==  8) { // BPM Change using reference table
+        } else if (ch == 8) { // BPM Change using reference table
             uint factor = m->getTickCount() / (data.size() / BPM_ID_LENGTH);
 
             for(size_t i=0; i<data.size() / BPM_ID_LENGTH; ++i)
@@ -322,7 +323,7 @@ void Chart_BMS::load_chart()
                           );
                 }
             }
-        } else if (ch ==  9) { // STOP via lookup table
+        } else if (ch == 9) { // STOP via lookup table
             uint factor = m->getTickCount() / (data.size() / STP_ID_LENGTH);
             for(size_t i=0; i<data.size() / STP_ID_LENGTH; ++i)
             {
@@ -349,15 +350,16 @@ void Chart_BMS::load_chart()
                           );
                 }
             }
-        } else if (ch ==  1) { // Background nodes
+        } else if (ch == 1) { // Background notes
             uint factor = m->getTickCount() / (data.size() / WAV_ID_LENGTH);
 
             for(size_t i=0; i<data.size() / WAV_ID_LENGTH; ++i)
             {
                 uint wav = string_to_raw_uint(data.substr(i*WAV_ID_LENGTH, WAV_ID_LENGTH));
-                if (wav != repeating_char_to_raw_uint('0', WAV_ID_LENGTH)) {
+                if (wav != repeating_char_to_raw_uint('0', WAV_ID_LENGTH))
+                {
                     TTime time = m->getTimeFromTickCount(i*factor); time.measure = mn;
-                    Note_Single* n = new Note_Single(time, ENKey::NOTE_AUTO, wav);
+                    Note_Single* n = new Note_Single(ENKey::NOTE_AUTO, time, wav);
                     m->addNote(n);
                 }
             }
@@ -382,6 +384,7 @@ void Chart_BMS::load_chart()
                 case 28: key = ENKey::NOTE_P2_6; break;
                 case 29: key = ENKey::NOTE_P2_7; break;
 
+                // TODO preserve mapping
                 default: key = ENKey::NOTE_AUTO; break;
             }
 
@@ -389,9 +392,10 @@ void Chart_BMS::load_chart()
             for(size_t i=0; i<data.size() / WAV_ID_LENGTH; ++i)
             {
                 uint wav = string_to_raw_uint(data.substr(i*WAV_ID_LENGTH, WAV_ID_LENGTH));
-                if (wav != repeating_char_to_raw_uint('0', WAV_ID_LENGTH)) {
+                if (wav != repeating_char_to_raw_uint('0', WAV_ID_LENGTH))
+                {
                     TTime time = m->getTimeFromTickCount(i*factor); time.measure = mn;
-                    Note_Single* n = new Note_Single(time, key, wav);
+                    Note_Single* n = new Note_Single(key, time, wav);
                     m->addNote(n);
                 }
             }
@@ -400,7 +404,8 @@ void Chart_BMS::load_chart()
 
         } else if (ch >= 50 && ch <  70) { // Long notes
             ENKey key;
-            switch (ch) {
+            switch (ch)
+            {
                 case 51: key = ENKey::NOTE_P1_1; break;
                 case 52: key = ENKey::NOTE_P1_2; break;
                 case 53: key = ENKey::NOTE_P1_3; break;
@@ -419,15 +424,18 @@ void Chart_BMS::load_chart()
                 case 68: key = ENKey::NOTE_P2_6; break;
                 case 69: key = ENKey::NOTE_P2_7; break;
 
+                // TODO preserve mapping
                 default: key = ENKey::NOTE_AUTO; break;
             }
 
             uint factor = m->getTickCount() / (data.size() / WAV_ID_LENGTH);
-            for(size_t i=0; i<data.size() / WAV_ID_LENGTH; ++i) {
+            for(size_t i=0; i<data.size() / WAV_ID_LENGTH; ++i)
+            {
                 uint wav = string_to_raw_uint(data.substr(i*WAV_ID_LENGTH, WAV_ID_LENGTH));
-                if (wav != repeating_char_to_raw_uint('0', WAV_ID_LENGTH)) {
+                if (wav != repeating_char_to_raw_uint('0', WAV_ID_LENGTH))
+                {
                     TTime time = m->getTimeFromTickCount(i*factor); time.measure = mn;
-                    Note_Single* n = new Note_Single(time, key, wav);
+                    Note_Single* n = new Note_Single(key, time, wav);
                     LongNotes.push_back(n);
                 }
             }

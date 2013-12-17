@@ -237,30 +237,32 @@ void O2JamChart::load_chart ()
                         // set up event
                         cN++;
 
-                        if (nChannel == ENKey::NOTE_AUTO) {
+                        if (nChannel == ENKey::NOTE_AUTO)
+                        {
+                            nChannel = ENKey_toBG(iChannel - 9);
                             // Silently remove release notes.
                             if (Type == 2) {
-                                Note_Single* pNote = new Note_Single(time, nChannel, SmplID, Vol, Pan);
+                                Note_Single* pNote = new Note_Single(nChannel, time, SmplID, Vol, Pan);
                                 pMeasure->addNote(pNote);
                                 cAN++, cSN++;
                                 printf("[debug] Parsing to Hold Note in Autoplay Channel as Normal Note. \n");
                             } else if (Type == 3) {
                                 printf("[debug] Skipping Release Note in Autoplay Channel. \n");
                             } else {
-                                Note_Single* pNote = new Note_Single(time, nChannel, SmplID, Vol, Pan);
+                                Note_Single* pNote = new Note_Single(nChannel, time, SmplID, Vol, Pan);
                                 pMeasure->addNote(pNote);
                                 cAN++, cSN++;
                             }
                         } else if (Type == 2) { // Hold Notes
-                            Note_Single* pNote = new Note_Single(time, nChannel, SmplID, Vol, Pan);
+                            Note_Single* pNote = new Note_Single(nChannel, time, SmplID, Vol, Pan);
                             HNL.push_back(pNote);
                             cHN++;
                         } else if (Type == 3) { // Release Notes
-                            Note_Single* pNote = new Note_Single(time, nChannel, SmplID, Vol, Pan);
+                            Note_Single* pNote = new Note_Single(nChannel, time, SmplID, Vol, Pan);
                             RNL.push_back(pNote);
                             cRN++;
                         } else {
-                            Note_Single* pNote = new Note_Single(time, nChannel, SmplID, Vol, Pan);
+                            Note_Single* pNote = new Note_Single(nChannel, time, SmplID, Vol, Pan);
                             pMeasure->addNote(pNote);
                             cAN++, cPN++;
                         }

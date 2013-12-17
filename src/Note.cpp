@@ -5,19 +5,19 @@
 #include "Note.hpp"
 #include "UI/Tracker.hpp"
 #include "AudioManager.hpp"
-#include "InputManager.hpp"
 
 AudioManager* Note::am = nullptr;
 
-void Note_Single::init(UI::Tracker const &t)
+void Note_Single::init(UI::Tracker const &tracker)
 {
-    score = JScore_NONE;
-    tick  = t.compare_ticks(_0TTime, time);
+    mScore = JScore();
+    mTick  = tracker.compare_ticks(TTime(), this->getTime());
 }
 
-void Note_Single::render(UI::Tracker const &t, clan::Canvas &canvas) const
+void Note_Single::render(UI::Tracker const &tracker, clan::Canvas &canvas) const
 {
-    rectf p = t.getDrawRect(key, tick);
+    rectf p = tracker.getDrawRect(this->getKey(), this->getTick());
+
     if (p.left > canvas.get_width () || p.right  < 0)
         return;
     if (p.top  > canvas.get_height() || p.bottom < 0)
@@ -29,33 +29,35 @@ void Note_Single::render(UI::Tracker const &t, clan::Canvas &canvas) const
     canvas.fill_rect(p, clan::Colorf::white);
 }
 
-void Note_Single::update(UI::Tracker const &t, KeyStatus const &k)
+void Note_Single::update(UI::Tracker const &tracker, const KeyStatus &stat)
 {
-    JScore temp = t.cgetJudge().judge(tick - t.getCurrentTick());
+    JScore score = tracker.cgetJudge().judge(this->getTick() - tracker.getCurrentTick());
 
-    switch (k)
+    switch(stat)
     {
         case KeyStatus::AUTO:
-            am->play(sample_id, 0, vol, pan);
-            score = JScore ( AUTO, 0, temp.delta );
-            dead  = true;
+            am->play(mSampleID, 0, mVol, mPan);
+            mScore = JScore( AUTO, 0, score.delta );
+            mDead  = true;
             return;
         case KeyStatus::ON :
-            am->play(sample_id, 1, vol, pan);
-            if (temp.rank == EJRank::NONE) {
+            am->play(mSampleID, 1, mVol, mPan);
+            if (score.rank == EJRank::NONE)
+            {
                 return;
             } else {
-                score = temp;
-                dead  = true;
+                mScore = score;
+                mDead  = true;
                 return;
             }
 
         case KeyStatus::OFF:
         case KeyStatus::LOCKED:
         default:
-            if (temp.rank == EJRank::MISS) { // Too late to hit.
-                score = temp;
-                dead  = true;
+            if (score.rank == EJRank::MISS) // Too late to hit.
+            {
+                mScore = score;
+                mDead  = true;
                 return;
             } else {
                 return;
@@ -64,17 +66,19 @@ void Note_Single::update(UI::Tracker const &t, KeyStatus const &k)
 }
 
 
-void Note_Long::init(UI::Tracker const &t)
+////    Note_Long    //////////////////////////////////////////////////
+
+void Note_Long::init(UI::Tracker const &tracker)
 {
-    score = JScore_NONE;
-    b_tick = t.compare_ticks(_0TTime, b_time);
-    e_tick = t.compare_ticks(_0TTime, e_time);
+    mScore = JScore();
+    mBTick = tracker.compare_ticks(TTime(), mBTime);
+    mETick = tracker.compare_ticks(TTime(), mETime);
 }
 
-void Note_Long::render(UI::Tracker const &t, clan::Canvas &canvas) const
+void Note_Long::render(UI::Tracker const &tracker, clan::Canvas &canvas) const
 {
-    recti pb = t.getDrawRect(key, b_tick);
-    recti pe = t.getDrawRect(key, e_tick);
+    recti pb = tracker.getDrawRect(this->getKey(), mBTick);
+    recti pe = tracker.getDrawRect(this->getKey(), mETick);
 
     // Skip unused
     if (pb.left > canvas.get_width () || pb.right  < 0 ||
@@ -91,17 +95,17 @@ void Note_Long::render(UI::Tracker const &t, clan::Canvas &canvas) const
 
     clan::Colorf body, head;
 
-    if (b_score.rank == EJRank::AUTO) {
+    if (mBScore.rank == EJRank::AUTO) {
         body = head = clan::Colorf::gold;
         body.a = 0.8f;
-    } else if (b_score.rank == EJRank::MISS || e_score.rank == EJRank::MISS) {
+    } else if (mBScore.rank == EJRank::MISS || mEScore.rank == EJRank::MISS) {
         body = head = clan::Colorf::red;
         body.a = 0.4f;
         head.a = 0.8f;
-    } else if (b_score.rank == EJRank::NONE) {
+    } else if (mBScore.rank == EJRank::NONE) {
         body = head = clan::Colorf::white;
         body.a = 0.8f;
-    } else if (e_score.rank == EJRank::NONE) {
+    } else if (mEScore.rank == EJRank::NONE) {
         body = head = clan::Colorf::green;
         body.a = 0.8f;
     } else {
@@ -116,18 +120,28 @@ void Note_Long::render(UI::Tracker const &t, clan::Canvas &canvas) const
     canvas.fill_rect(pe, head);
 }
 
-void Note_Long::update(UI::Tracker const &t, KeyStatus const &k)
-{
-    JScore b_temp = JScore_NONE, e_temp = JScore_NONE;
 
-    b_temp = t.cgetJudge().judge(b_tick - t.getCurrentTick());
-    e_temp = t.cgetJudge().judge(e_tick - t.getCurrentTick());
+void Note_Long::calc_score()
+{
+    mScore.rank  = mEScore.rank;
+    mScore.score = mEScore.score + mBScore.score;
+    mScore.delta = mEScore.delta + mBScore.delta;
+}
+
+
+void Note_Long::update(UI::Tracker const &tracker, KeyStatus const &stat)
+{
+    JScore b_temp = JScore();
+    JScore e_temp = JScore();
+
+    b_temp = tracker.cgetJudge().judge(mBTick - tracker.getCurrentTick());
+    e_temp = tracker.cgetJudge().judge(mETick - tracker.getCurrentTick());
 
 
     // Remove from key-lock context if score is already set.
     // But stay alive if not past deletion point.
-    if (score.rank != EJRank::NONE) {
-        dead = (e_temp.rank == EJRank::MISS) ? true : dead;
+    if (mScore.rank != EJRank::NONE) {
+        mDead = (e_temp.rank == EJRank::MISS) ? true : mDead;
         return;
     }
 
@@ -136,46 +150,46 @@ void Note_Long::update(UI::Tracker const &t, KeyStatus const &k)
     //// DONE -> Note::score is set, but not dead to render graphics.
     //// DEAD -> Note::dead  is set.
     //// TODO Make this prettier and less redundant.
-    switch (k)
+    switch(stat)
     {
         case KeyStatus::AUTO: // [DONE] Autoplay note.
-            if (b_score.rank == EJRank::NONE) {
-                am->play(b_sample_id, 0, vol, pan);
-                b_score = JScore ( EJRank::AUTO, 0, b_temp.delta );
+            if (mBScore.rank == EJRank::NONE) {
+                am->play(mBSID, 0, mVol, mPan);
+                mBScore = JScore( EJRank::AUTO, 0, b_temp.delta );
             }
 
             if (e_temp.rank == EJRank::MISS) {
-                e_score = JScore ( EJRank::AUTO, 0, e_temp.delta );
-                score = JScore ( EJRank::AUTO, 0, 0 );
-                dead = true;
+                mEScore = JScore( EJRank::AUTO, 0, e_temp.delta );
+                mScore  = JScore( EJRank::AUTO, 0, 0 );
+                mDead = true;
             }
 
             return;
 
         case KeyStatus::LOCKED: // Holding Key
-            if (e_score.rank == EJRank::NONE) {         // Unscored end
-                if (b_score.rank != EJRank::NONE
-                        &&  b_score.rank != EJRank::MISS
-                        &&  b_score.rank != EJRank::AUTO) {     // Scored starting point
-                    assert(score.rank == NONE && "Note logic leak.");
+            if (mEScore.rank == EJRank::NONE) {         // Unscored end
+                if (mBScore.rank != EJRank::NONE
+                &&  mBScore.rank != EJRank::MISS
+                &&  mBScore.rank != EJRank::AUTO) {     // Scored starting point
+                    assert(mScore.rank == NONE && "Note logic leak.");
                     if (e_temp.rank == MISS) {          // [DONE] Too late to release
-                        e_score = e_temp;
-                        calculateScore();
-                        dead = true;
+                        mEScore = e_temp;
+                        calc_score();
+                        mDead = true;
                         return;
                     } else {                            // [LIVE] Still waiting for end point
                         return;
                     }
-                } else if (b_score.rank == EJRank::MISS
-                        || b_score.rank == EJRank::AUTO) {      // Missed starting point
-                    e_score = b_score;                  // This should not be needed, but someone kept forgetting to set e_score somewhere.
-                    calculateScore();                   // [????]
+                } else if (mBScore.rank == EJRank::MISS
+                        || mBScore.rank == EJRank::AUTO) {      // Missed starting point
+                    mEScore = mBScore;                  // This should not be needed, but someone kept forgetting to set e_temp somewhere.
+                    calc_score();                   // [????]
                     return;
                 } else {                                        // Unscored starting point
                     if (b_temp.rank == EJRank::MISS) {  // [DONE] Missed starting point.
-                        b_score = b_temp;
-                        e_score = b_temp;
-                        calculateScore();
+                        mBScore = b_temp;
+                        mEScore = b_temp;
+                        calc_score();
                         return;
                     } else {                            // [WAIT] Still have the time to respond.
                         return;
@@ -186,38 +200,38 @@ void Note_Long::update(UI::Tracker const &t, KeyStatus const &k)
             break;
 
         case KeyStatus::OFF : // Have not hit anything OR released key.
-            if (b_score.rank == EJRank::NONE) {     // Unscored starting point; not active yet.
+            if (mBScore.rank == EJRank::NONE) {      // Unscored starting point; not active yet.
                 if (b_temp.rank == EJRank::MISS) {  // [DONE] Missed starting point.
-                    b_score = b_temp;
-                    e_score = b_temp;
-                    calculateScore();
+                    mBScore = b_temp;
+                    mEScore = b_temp;
+                    calc_score();
                     return;
                 } else {                            // [WAIT] Still have the time to respond.
                     return;
                 }
-            } else if (b_score.rank == EJRank::MISS
-                    || b_score.rank == EJRank::AUTO) {      // Starting point was scored MISS or AUTO
-                assert(b_score.rank == e_score.rank);       // Starting point and ending points must be equal.
+            } else if (mBScore.rank == EJRank::MISS
+                    || mBScore.rank == EJRank::AUTO) {      // Starting point was scored MISS or AUTO
+                assert(mBScore.rank == mEScore.rank);       // Starting point and ending points must be equal.
                 if (e_temp.rank == EJRank::MISS) {  // [DEAD] Past target time
-                    dead = true;
+                    mDead = true;
                     return;
                 } else {                            // [DONE] Not past target time
                     return;
                 }
             } else {                                // Starting point was scored.
-                if (e_score.rank == EJRank::NONE) {         // Ending point hasn't, so the player was holding this.
+                if (mEScore.rank == EJRank::NONE) {         // Ending point hasn't, so the player was holding this.
                     if (e_temp.rank == EJRank::NONE) {              // [DONE] Release too early
-                        e_score = JScore ( EJRank::MISS, 0, e_temp.delta );
-                        calculateScore();
+                        mEScore = JScore( EJRank::MISS, 0, e_temp.delta );
+                        calc_score();
                         return;
                     } else {                                        // [DEAD] Release at the right time
-                        e_score = e_temp;
-                        calculateScore();
+                        mEScore = e_temp;
+                        calc_score();
                         return;
                     }
                 } else {                                    // Ending point was scored.
                     if (e_temp.rank == EJRank::MISS) {              // [DEAD] Past target time
-                        dead = true;
+                        mDead = true;
                         return;
                     } else {                                        // [DONE] Not past target time
                         return;
@@ -226,22 +240,22 @@ void Note_Long::update(UI::Tracker const &t, KeyStatus const &k)
             }
 
         case KeyStatus::ON: // Just hit the key or rehit after miss.
-            if (b_score.rank == EJRank::NONE) {             // Starting point was not hit
-                am->play(b_sample_id, 1, vol, pan);  // Play sound.
+            if (mBScore.rank == EJRank::NONE) {             // Starting point was not hit
+                am->play(mBSID, 1, mVol, mPan);  // Play sound.
                 if (b_temp.rank == EJRank::NONE) {                  // [WAIT] Hit too early
                     return;
                 } else {                                            // [LIVE] Staring point scores!
-                    b_score = b_temp;
+                    mBScore = b_temp;
                     return;                                     // DO NOT CLEAR FROM ACTIVE QUEUE
                 }
-            } else if (e_score.rank == EJRank::NONE) {      // Starting point was hit, ending point hasn't
+            } else if (mEScore.rank == EJRank::NONE) {      // Starting point was hit, ending point hasn't
                 if (e_temp.rank == EJRank::MISS) {                  // [DEAD] Past target time
-                    e_score = e_temp;
-                    calculateScore();
-                    dead = true;
+                    mEScore = e_temp;
+                    calc_score();
+                    mDead = true;
                     return;
                 } else {                                            // [DONE] Not past target time
-                    am->play(b_sample_id, 1, vol, pan);             // Play sound.
+                    am->play(mBSID, 1, mVol, mPan);             // Play sound.
                     return;
                 }
             } else {
@@ -254,7 +268,7 @@ void Note_Long::update(UI::Tracker const &t, KeyStatus const &k)
 }
 
 
-
+// TODO This does not work in most cases.
 NoteList zip_key(SingleNoteList H, SingleNoteList R)
 {
     NoteList L;

@@ -23,16 +23,14 @@ enum EJRank
 /** Judge score structure */
 struct JScore
 {
-    EJRank rank;   // Accuracy ranking
-    long score;  // Score given
-    long delta;  // Tick difference
+    EJRank  rank;   //! Accuracy ranking
+    long    score;  //! Score given
+    long    delta;  //! Tick difference
 
-    JScore(EJRank r, long s, long d) :
-        rank(r), score(s), delta(d)
-    { }
+    constexpr JScore() : rank(NONE), score(0), delta(0) { }
+    constexpr JScore(EJRank const &R, long const &S, long const &D) : rank(R), score(S), delta(D) { }
 };
 
-const static JScore JScore_NONE(EJRank::NONE, 0, 0);
 
 /**
  * Scoring window calculator
@@ -49,17 +47,12 @@ private:
     long rP, rC, rG, rB; // Real half-duration base reference
     long tP, tC, tG, tB; // Tick half-duration (after translation)
 
-    double currScore, maxScore, minScore; // Score accumulation. Divide the two to get score percentage.
-
 public:
-    Judge(  const unsigned &_rP,
-            const unsigned &_rC,
-            const unsigned &_rG,
-            const unsigned &_rB
-         ) :
-        rP(_rP), rC(_rC), rG(_rG), rB(_rB),
-        tP(0  ), tC(0  ), tG(0  ), tB(0  ),
-        currScore(0), maxScore(0), minScore(0)
+    Judge(
+        unsigned const &_rP, unsigned const &_rC,
+        unsigned const &_rG, unsigned const &_rB
+    ) : rP(_rP), rC(_rC), rG(_rG), rB(_rB),
+        tP(0  ), tC(0  ), tG(0  ), tB(0  )
     { }
 
     inline long const &cgetTP() const { return tP; }
@@ -78,9 +71,10 @@ public:
      * @param _rGB duration window between u.b. of GOOD and the l.b. of BAD
      * @param _rBM duration window between u.b. of BAD and the l.b. of MISS
      */
-    void setBaseTiming(const unsigned &_rP, const unsigned &_rC,
-            const unsigned &_rG, const unsigned &_rB)
-    {
+    inline void setBaseTiming(
+        unsigned const &_rP, unsigned const &_rC,
+        unsigned const &_rG, unsigned const &_rB
+    ) {
         rP = _rP, rC = _rC, rG = _rG, rB = _rB;
     }
 
@@ -91,11 +85,10 @@ public:
      * @param tempo_mspt      operating tempo in milliseconds per tick.
      * @param ceiling_factor  tick rounding (up) factor. (default is 2)
      */
-    void calculateTiming(
-            const double &tempo_mspt,
-            const unsigned long &ceiling_factor = 2
-            )
-    {
+    inline void calculateTiming(
+        const double &tempo_mspt,
+        const unsigned long &ceiling_factor = 2
+    ) {
         tP = lround(static_cast<double>(rP) / tempo_mspt);
         tP += ceiling_factor - tP % ceiling_factor;
         tC = lround(static_cast<double>(rC) / tempo_mspt);
@@ -106,7 +99,7 @@ public:
         tB += ceiling_factor - tB % ceiling_factor;
     }
 
-    bool isInScoringRange(const long &delta) const
+    inline bool isInScoringRange(const long &delta) const
     {
         return (delta < tP + tC + tG + tB);
     }
@@ -116,7 +109,7 @@ public:
      * @param delta tick difference
      * @return score.
      */
-    const JScore judge(const long &delta) const
+    inline JScore judge(const long &delta) const
     {
         if (delta < 0 - tP - tC - tG - tB)
             return JScore(MISS, 0, delta); /* miss; too late */
