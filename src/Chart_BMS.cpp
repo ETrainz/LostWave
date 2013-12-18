@@ -467,6 +467,9 @@ void Chart_BMS::load_chart()
         delete b;
     }
 
+    sort_sequence();
+    this->sequence_loaded = true;
+
 }
 
 void Chart_BMS::load_samples()

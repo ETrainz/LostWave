@@ -83,7 +83,7 @@ public:
         Note_Single const &end,
         float vol = 1.0f, float pan = 0.0f
     ) : Note(begin.getKey(), begin.getTime()),
-        mBTime (begin.getTime())    , mETime (begin.getTime()),
+        mBTime (begin.getTime())    , mETime (end.getTime()),
         mBTick (0)       , mETick (0),
         mBSID  (begin.getSampleID()), mESID  (end.getSampleID()),
         mVol   (vol)     , mPan   (pan),
