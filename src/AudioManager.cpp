@@ -23,7 +23,8 @@ AudioManager::AudioManager(size_t frame_count, size_t sample_rate) :
 
     mRunning.test_and_set();
 
-    mUpdateThread = new std::thread( [this] () {
+    mThreads.push_back(
+        new std::thread( [this] () {
             while(mRunning.test_and_set())
             {
                 if (this->update() == false)
@@ -31,13 +32,21 @@ AudioManager::AudioManager(size_t frame_count, size_t sample_rate) :
                 else
                     mUpdateCount += 1;
             }
-            });
+            mRunning.clear();
+        })
+    );
 }
 
 AudioManager::~AudioManager()
 {
     mRunning.clear();
-    mUpdateThread->join();
+    while(mThreads.empty() == false)
+    {
+        auto it = mThreads.begin();
+        (*it)->join();
+        mThreads.erase(it);
+    }
+
     wipe_SampleMap(true);
 }
 
@@ -115,4 +124,10 @@ bool AudioManager::update()
     mOutputDevice.getFIFOBuffer_mutex().unlock();
 
     return true;
+}
+
+void AudioManager::attach_thread(std::thread* thread_ptr)
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    mThreads.push_back(thread_ptr);
 }

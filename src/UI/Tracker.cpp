@@ -13,8 +13,8 @@ Tracker::Tracker(
     recti const &area ,
     Judge const &judge,
     Chart *chart,
-    std::initializer_list<KeyInputPair> show_keys,
-    std::initializer_list<ENKey>        auto_keys,
+    KeyInputList const &show_keys,
+    KeyList      const &auto_keys,
     std::string  const &label,
     TClock             *clock
 ) : clan::GUIComponent(
@@ -32,7 +32,7 @@ Tracker::Tracker(
     mCombo(0), mMaxCombo(0),
 
     mShowKeys(),
-    mAutoKeys(auto_keys),
+    mAutoKeys(auto_keys.cbegin(), auto_keys.cend()),
     mChart(chart),
 
     mClock(clock == nullptr ? new TClock(chart->getTempo()) : clock ),
@@ -279,17 +279,16 @@ void Tracker::loop_Notes(NoteList &notes, uint &cache)
 
             if (note->isScored() == false)
             {
-                if (ENKey_isAutoPlay(note->getKey()) ||
-                    mAutoKeys.find(note->getKey()) != mAutoKeys.end()
-                        ) {
+                if (
+                // It's in autoplay channel or background channel.
+                    ENKey_isAutoPlay  (note->getKey())
+                // It's in session auto-key channel.
+                    or  mAutoKeys.find(note->getKey()) != mAutoKeys.cend()
+                // It's not on the list of selected keys.
+                    or  std::find(mShowKeys.begin(), mShowKeys.end(), note->getKey()) == mShowKeys.end()
+                ) {
                     if (note->getTime() <= mTime)
                         note->update(*this, KeyStatus::AUTO);
-                    //// Notes are already aligned by time, so this is correct
-                } else if (std::find(mShowKeys.begin(), mShowKeys.end(), note->getKey()) == mShowKeys.end()) {
-                    if (note->getTime() <= mTime) {
-                        note->update(*this, KeyStatus::ON);
-                        note->update(*this, KeyStatus::OFF);
-                    }
                 } else if (mKeyNotes.find(note->getKey()) == mKeyNotes.end()) {
                     mKeyNotes.insert(std::make_pair(note->getKey(), note));
                 }

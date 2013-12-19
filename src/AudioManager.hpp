@@ -35,10 +35,11 @@ using VoiceMapNode  = VoiceMap::value_type;
 class AudioManager : public awe::AEngine
 {
 private:
-    std::mutex      mMutex;         /// Master mutex
-    std::thread*    mUpdateThread;  /// Update thread object
-    ulong           mUpdateCount;   /// Update sync counter
-    std::atomic_flag    mRunning;   /// Thread state flag
+    std::mutex                  mMutex;         /// Master mutex
+    std::vector< std::thread* > mThreads;       /// Threads relying on this.
+    ulong                       mUpdateCount;   /// Update sync counter
+    std::atomic_flag            mRunning;       /// Thread state flag
+
 
     SampleMap       mSampleMap;
     TrackMap        mTrackMap;
@@ -51,7 +52,9 @@ public:
 
     inline ulong getUpdateCount() const { return mUpdateCount; }
 
-    inline std::mutex& getMutex() { return mMutex; }
+    inline std::mutex       & getMutex  () { return mMutex; }
+    inline std::atomic_flag & getRunning() { return mRunning; }
+
     inline SampleMap * getSampleMap() { return &mSampleMap; }
     inline TrackMap  * getTrackMap () { return &mTrackMap; }
     inline VoiceMap  * getVoiceMap () { return &mVoiceMap; }
@@ -70,6 +73,8 @@ public:
     void swap_SampleMap(SampleMap& new_map);
 
     bool play(ulong, uchar, float = 1.0f, float = 0.0f, bool = false);
+
+    void attach_thread(std::thread* thread_ptr);
 };
 
 

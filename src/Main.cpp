@@ -13,11 +13,9 @@
 #include "Chart_O2Jam.hpp"
 #include "Chart_BMS.hpp"
 
-#define ENABLE_VISUALIZER true
-
 // TODO constexpr pairs are not supported until C++14
-std::initializer_list< std::pair<const ENKey, InputManager::KeyCode> >
-default_keymap {
+UI::Tracker::KeyInputList default_keymap
+{
     { ENKey::NOTE_P1_1, clan::InputCode::keycode_s },
     { ENKey::NOTE_P1_2, clan::InputCode::keycode_d },
     { ENKey::NOTE_P1_3, clan::InputCode::keycode_f },
@@ -27,9 +25,8 @@ default_keymap {
     { ENKey::NOTE_P1_7, clan::InputCode::keycode_l }
 };
 
-constexpr std::initializer_list< ENKey > _0ENKey {};
-constexpr std::initializer_list< ENKey >
-default_keys {
+KeyList default_keylist
+{
     ENKey::NOTE_P1_1,
     ENKey::NOTE_P1_2,
     ENKey::NOTE_P1_3,
@@ -42,11 +39,11 @@ default_keys {
 
 
 
-static void autoVisualize(AudioManager* am, UI::FFT* FFTbg, UI::FFT* FFTfg)
+static void autoVisualize(AudioManager* am, UI::FFT* FFTbg, UI::FFT* FFTp1, UI::FFT* FFTp2)
 {
     ulong count = 0;
 
-    while(ENABLE_VISUALIZER)
+    while(am->getRunning().test_and_set())
     {
         if(am->getMutex().try_lock())
         {
@@ -54,7 +51,8 @@ static void autoVisualize(AudioManager* am, UI::FFT* FFTbg, UI::FFT* FFTfg)
             if (new_count != count)
             {
                 FFTbg->update(am->getMasterTrack().getOutput());
-                FFTfg->update(am->getTrackMap()->at(1)->getOutput());
+                FFTp1->update(am->getTrackMap()->at(1)->getOutput());
+                FFTp2->update(am->getTrackMap()->at(2)->getOutput());
                 count = new_count;
             }
             am->getMutex().unlock();
@@ -62,6 +60,8 @@ static void autoVisualize(AudioManager* am, UI::FFT* FFTbg, UI::FFT* FFTfg)
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
     }
+
+    am->getRunning().clear();
 }
 
 int App::main(std::vector<std::string> const &args)
@@ -91,30 +91,60 @@ int App::main(std::vector<std::string> const &args)
 
         Game* game = Game::create(clDWD);
 
-        uint FFTbars = config.get_if_else_set(
-            &JSONReader::getInteger, "audio.fft.bars", 128,
-            [] (long const &value) -> bool { return value > 0 && value < 65536; }
-            );
+        {   // Create audio visuals thread
+            uint FFTbars = config.get_if_else_set(
+                &JSONReader::getInteger, "audio.fft.bars", 128,
+                [] (long const &value) -> bool { return value > 0 && value < 65536; }
+                );
+
+            UI::FFT* FFTbg = new UI::FFT(game, game->get_geometry(),
+                    game->am.getMasterTrack().getConfig().targetFrameCount,
+                    game->am.getMasterTrack().getConfig().targetSampleRate,
+                    FFTbars, 0.1f
+                    );
+            UI::FFT* FFTp1 = new UI::FFT(game, game->get_geometry(),
+                    game->am.getMasterTrack().getConfig().targetFrameCount,
+                    game->am.getMasterTrack().getConfig().targetSampleRate,
+                    FFTbars, 0.1f
+                    );
+            UI::FFT* FFTp2 = new UI::FFT(game, game->get_geometry(),
+                    game->am.getMasterTrack().getConfig().targetFrameCount,
+                    game->am.getMasterTrack().getConfig().targetSampleRate,
+                    FFTbars, 0.1f
+                    );
+
+            FFTbg->set_constant_repaint(true);
+            FFTp1->set_constant_repaint(true);
+            FFTp2->set_constant_repaint(true);
+
+            std::thread* av_thread = new std::thread(autoVisualize, &game->am, FFTbg, FFTp1, FFTp2);
+            game->am.attach_thread(av_thread);
+        }
 
         bool autoplay = config.get_or_set(
                 &JSONReader::getBoolean, "player.P1.autoplay", false);
 
+        KeyList                     keys;
+        UI::Tracker::KeyInputList   key_inputs;
 
-        UI::FFT FFTbg(game, game->get_geometry(),
-                    game->am.getMasterTrack().getConfig().targetFrameCount,
-                    game->am.getMasterTrack().getConfig().targetSampleRate,
-                    FFTbars, 0.1f
-        );
-        UI::FFT FFTfg(game, game->get_geometry(),
-                    game->am.getMasterTrack().getConfig().targetFrameCount,
-                    game->am.getMasterTrack().getConfig().targetSampleRate,
-                    FFTbars, 0.1f
-        );
-        FFTbg.set_constant_repaint(true);
-        FFTfg.set_constant_repaint(true);
-
-        std::thread AV(autoVisualize, &game->am, &FFTbg, &FFTfg);
-        AV.detach();
+        {   // Populate input keys based on config.
+            std::string input_str = config.get_if_else_set(
+                    &JSONReader::getString, "player.P1.map-7K", std::string("sdf jkl"),
+                    [] (std::string const &value) -> bool { return value.size() == 7; }
+                    );
+#ifdef _MSC_VER
+            std::transform(input_str.begin(), input_str.end(), input_str.begin(), ::toupper);
+#else
+            std::transform(input_str.begin(), input_str.end(), input_str.begin(), ::tolower);
+#endif
+            auto it = default_keylist.cbegin();
+            for(char const &c : input_str)
+            {
+                keys.push_back(*it);
+                key_inputs.push_back({*it, c});
+                it++;
+            }
+        }
 
         Music* music;
         Chart* chart;
@@ -141,7 +171,7 @@ int App::main(std::vector<std::string> const &args)
                 {
                     UI::Tracker tracker(
                         game, game->get_geometry(), JHard, chart,
-                        default_keymap, autoplay ? default_keys : _0ENKey
+                        key_inputs, autoplay ? keys : KeyList()
                     );
                     tracker.start();
                     tracker.exec();
@@ -156,7 +186,11 @@ int App::main(std::vector<std::string> const &args)
                 MS.set_visible(false);
 
                 music = MS.get();
-                chart = music->charts[0];
+
+                if (music == nullptr)
+                    break;
+
+                chart = music->charts.begin()->second;
 
                 chart->load_art();
                 chart->load_samples();
@@ -167,7 +201,7 @@ int App::main(std::vector<std::string> const &args)
                 {
                     UI::Tracker tracker(
                         game, game->get_geometry(), JHard, chart,
-                        default_keymap, autoplay ? default_keys : _0ENKey
+                        key_inputs, autoplay ? keys : KeyList()
                     );
                     tracker.start();
                     tracker.exec();

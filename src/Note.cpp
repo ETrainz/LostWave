@@ -36,12 +36,12 @@ void Note_Single::update(UI::Tracker const &tracker, const KeyStatus &stat)
     switch(stat)
     {
         case KeyStatus::AUTO:
-            am->play(mSampleID, 0, mVol, mPan);
+            am->play(mSampleID, ENKey_toInteger(getKey()), mVol, mPan);
             mScore = JScore( AUTO, 0, score.delta );
             mDead  = true;
             return;
         case KeyStatus::ON :
-            am->play(mSampleID, 1, mVol, mPan);
+            am->play(mSampleID, ENKey_isPlayer1(getKey()) ? 1 : 2, mVol, mPan);
             if (score.rank == EJRank::NONE)
             {
                 return;
@@ -154,7 +154,7 @@ void Note_Long::update(UI::Tracker const &tracker, KeyStatus const &stat)
     {
         case KeyStatus::AUTO: // [DONE] Autoplay note.
             if (mBScore.rank == EJRank::NONE) {
-                am->play(mBSID, 0, mVol, mPan);
+                am->play(mBSID, ENKey_toInteger(getKey()), mVol, mPan);
                 mBScore = JScore( EJRank::AUTO, 0, b_temp.delta );
             }
 
@@ -241,7 +241,7 @@ void Note_Long::update(UI::Tracker const &tracker, KeyStatus const &stat)
 
         case KeyStatus::ON: // Just hit the key or rehit after miss.
             if (mBScore.rank == EJRank::NONE) {             // Starting point was not hit
-                am->play(mBSID, 1, mVol, mPan);  // Play sound.
+                am->play(mBSID, ENKey_isPlayer1(getKey()) ? 1 : 2, mVol, mPan);  // Play sound.
                 if (b_temp.rank == EJRank::NONE) {                  // [WAIT] Hit too early
                     return;
                 } else {                                            // [LIVE] Staring point scores!
@@ -255,7 +255,7 @@ void Note_Long::update(UI::Tracker const &tracker, KeyStatus const &stat)
                     mDead = true;
                     return;
                 } else {                                            // [DONE] Not past target time
-                    am->play(mBSID, 1, mVol, mPan);             // Play sound.
+                    am->play(mBSID, ENKey_isPlayer1(getKey()) ? 1 : 2, mVol, mPan);             // Play sound.
                     return;
                 }
             } else {

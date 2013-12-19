@@ -33,6 +33,31 @@ inline bool  ENKey_isAutoPlay(ENKey const &key) {
     return static_cast<uint8_t>(key) >= static_cast<uint8_t>(ENKey::NOTE_AUTO);
 }
 
+inline bool  ENKey_isPlayer1(ENKey const &key) {
+    return
+        (static_cast<uint8_t>(key) >= static_cast<uint8_t>(ENKey::NOTE_P1_S)) and
+        (static_cast<uint8_t>(key) <  static_cast<uint8_t>(ENKey::NOTE_P2_S));
+}
+
+inline bool  ENKey_isPlayer2(ENKey const &key) {
+    return
+        (static_cast<uint8_t>(key) >= static_cast<uint8_t>(ENKey::NOTE_P2_S)) and
+        (static_cast<uint8_t>(key) <  static_cast<uint8_t>(ENKey::NOTE_AUTO));
+}
+
+inline unsigned char ENKey_toInteger(ENKey const &key) {
+    if (ENKey_isAutoPlay(key))
+        return 0;
+
+    if (ENKey_isPlayer1(key))
+        return 1;
+
+    if (ENKey_isPlayer2(key))
+        return 2;
+
+    return -1;
+}
+
 inline bool  ENKey_isBG(ENKey const &key) {
     return static_cast<uint8_t>(key) >= static_cast<uint8_t>(ENKey::NOTE_BG);
 }

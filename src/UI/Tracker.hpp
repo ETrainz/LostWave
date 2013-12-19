@@ -4,8 +4,6 @@
 #ifndef NOTE_TRACKER_H
 #define NOTE_TRACKER_H
 
-#include <initializer_list>
-
 #include "../__zzCore.hpp"
 #include "../InputManager.hpp"
 #include "../Judge.hpp"
@@ -23,10 +21,12 @@ namespace UI {
 
 class Tracker : public clan::GUIComponent
 {
-    typedef std::map <ENKey, Note*>                     KeyNoteMap;
-    typedef std::map <ENKey, InputManager::KeyCode>     KeyInputMap;
-    typedef KeyInputMap::value_type                     KeyInputPair;
-    typedef std::map <EJRank, int>                      RankScoreMap;
+public:
+    typedef typename std::map< ENKey, Note* >                   KeyNoteMap;
+    typedef typename std::map< ENKey, InputManager::KeyCode >   KeyInputMap;
+    typedef typename KeyInputMap::value_type                    KeyInputPair;
+    typedef typename std::list< KeyInputPair >                  KeyInputList;
+    typedef typename std::map< EJRank, int >                    RankScoreMap;
 
 private:
     Judge           mJudge;
@@ -60,9 +60,9 @@ public:
         Game        *game ,
         recti const &area ,
         Judge const &judge,
-        Chart *chart,
-        std::initializer_list<KeyInputPair> show_keys,
-        std::initializer_list<ENKey>        auto_keys,
+        Chart       *chart,
+        KeyInputList const &show_keys,
+        KeyList      const &auto_keys,
         std::string  const &label = "",
         TClock             *clock = nullptr
     );

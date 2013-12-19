@@ -49,7 +49,10 @@ private:
     int mVcount;    // Maximum number of elements to display on UI
     int mVtop;      // offset to top visible element
     int mVptr;      // offset to currently selected element
-    int mVstore;    // storage for if user cancels
+    int mVprv;      // Offset to previously selected element
+    int mVstore;    // Storage for if user cancels
+
+    clan::Image mBGImg; // Current background image.
 
 public:
     // Constructor

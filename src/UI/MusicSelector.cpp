@@ -69,7 +69,9 @@ MusicSelector::MusicSelector(clan::GUIComponent *parent, JSONReader &skin, Music
                 [] (int const &value) -> bool { return value >  0 && value <= 20; }
                 )), // Display up to 20 elements per screen, 10 elements as default
     mVtop(0),
-    mVptr(0)
+    mVptr(0),
+    mVprv  (-1),
+    mVstore(-1)
     {
         clan::Canvas canvas = get_canvas();
 
@@ -88,6 +90,9 @@ MusicSelector::MusicSelector(clan::GUIComponent *parent, JSONReader &skin, Music
 
 Music* MusicSelector::get() const
 {
+    if (mVptr < 0)
+        return nullptr;
+
     MusicList::const_iterator ip = mMusicList.begin(); // Selected item
     for(int i=0; i<mVptr; ip++, i++);
 
@@ -161,13 +166,45 @@ bool MusicSelector::process_input(const clan::InputEvent& event)
 void MusicSelector::render(clan::Canvas& canvas, const recti& clip_rect)
 {
     // Top-of-screen and currently-pointed iterators
-    MusicList::const_iterator it = mMusicList.begin(); // Top / current iteration
-    MusicList::const_iterator ip = mMusicList.begin(); // Selected item
+    MusicList::const_iterator it = mMusicList.cbegin(); // Top / current iteration
+    MusicList::const_iterator ip = mMusicList.cbegin(); // Selected item
+    MusicList::const_iterator il = mVprv == -1 ? mMusicList.cend() : mMusicList.cbegin(); // Previous item
 
     for(int i=0; i<mVtop; it++, i++);
     for(int i=0; i<mVptr; ip++, i++);
+    for(int i=0; i<mVprv; il++, i++);
 
-    // TODO There was some code here.
+    if (ip == mMusicList.cend()) {
+        // TODO Add random selection background image
+        mBGImg = clan::Image();
+    } else if (ip != il) {
+        if (il != mMusicList.cend())
+        (*il)->charts.begin()->second->setCoverArt();
+        (*ip)->charts.begin()->second->load_art();
+
+        mVprv = mVptr;
+
+        clan::PixelBuffer &cvrart = (*ip)->charts.begin()->second->getCoverArt();
+        if (cvrart.is_null()) {
+            mBGImg = clan::Image();
+        } else {
+            mBGImg = clan::Image(canvas, cvrart, recti(0,0,800,600));
+            mBGImg.set_alpha(0.333f);
+        }
+    }
+
+    if (mBGImg.is_null() == false)
+    {
+        float scale = std::min(
+            static_cast<float>(canvas.get_width ()) / static_cast<float>(mBGImg.get_width ()),
+            static_cast<float>(canvas.get_height()) / static_cast<float>(mBGImg.get_height())
+        );
+
+        mBGImg.draw( canvas, alignCC(
+            static_cast<sizef>(canvas.get_size()),
+            static_cast<sizef>(mBGImg.get_size()) * scale
+        ) );
+    }
 
     point2f pos = mso;
 
