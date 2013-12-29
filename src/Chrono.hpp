@@ -79,15 +79,18 @@ public:
         // The Z to AB converter automatically assumes 48 ticks as standard,
         // so we don't have to recalculate this.
         // tsg_tempo = 60000.0 / tsg_tpb;
-        tmp_mspt = tsg_tempo / tmp_bpm;
+        // This means that tmp_mspt never changes.
+        // tmp_mspt = tsg_tempo / tmp_bpm;
     }
 
     // Change tempo
     inline void setTempo (double BPM)
     {
         printf("[%lf] GOT BPM %lf @ ", tmp_bpm, BPM); currTTime.print(); printf("\n");
-        tmp_bpm  = BPM;
-        tmp_mspt = tsg_tempo / tmp_bpm;
+        tct_mstt -= tmp_mspt;
+        tmp_bpm   = BPM;
+        tmp_mspt  = tsg_tempo / tmp_bpm;
+        tct_mstt += tmp_mspt;
     }
 
     inline void setTStop (unsigned t)
