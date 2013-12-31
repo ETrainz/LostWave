@@ -86,7 +86,7 @@ bool TClock::update ()
 
     while (tct_stop > 0)
     {
-        if (tct_mstt < tmp_mspt) {
+        if (tct_mstt <= 0) {
             tct_mstt += tmp_mspt;
             tct_stop -= 1;
         } else {
@@ -94,7 +94,7 @@ bool TClock::update ()
         }
     }
 
-    while (tct_mstt < tmp_mspt)
+    while (tct_mstt <= 0)
     {
         // increment tick
         currTTime.tick++;
