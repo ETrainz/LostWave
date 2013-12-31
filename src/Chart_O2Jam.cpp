@@ -13,14 +13,14 @@ Music* openOJN (const std::string& path)
                 ) == false)
         return nullptr;
 
-    char* buffer = new char[300];
+    uint8_t* buffer = new uint8_t[300];
     int read = file.read(buffer, 300);
     if (read != 300) {
         delete[] buffer;
         return nullptr;
     }
 
-    OJN_Header *pHead = (OJN_Header*)((void*)buffer);
+    OJN_Header *pHead = (OJN_Header*)buffer;
 
     // parse header
     Music* music = new Music;
@@ -99,7 +99,7 @@ void O2JamChart::load_art ()
     if (read == static_cast<int>(ojn_header.newCoverArtSize)) {
         try
         {
-            clan::DataBuffer        dbuff ( reinterpret_cast<const void*>(buffer), read );
+            clan::DataBuffer        dbuff ( buffer, read );
             clan::IODevice_Memory   memio ( dbuff );
             clan::PixelBuffer       cover ( memio, "jpg", false );
 
@@ -136,20 +136,21 @@ void O2JamChart::load_chart ()
     if( file.open(ojn_path, clan::File::open_existing, clan::File::access_read) == false )
         return;
 
-    unsigned long chartSize = file.get_size() - ojn_header.DataOffset[chart_index];
+    int chartSize = file.get_size() - ojn_header.DataOffset[chart_index];
 
     file.seek(ojn_header.DataOffset[chart_index], clan::File::seek_set);
-    char* buffer = new char[chartSize];
-    int read = file.read(buffer, chartSize);
-    if (read != (int)chartSize)
-        delete buffer;
 
-    const char *pPtr = (char*)((void*)buffer);
+    uint8_t* buffer = new uint8_t[chartSize];
+    int read = file.read(buffer, chartSize);
+    if (read != chartSize)
+        throw std::runtime_error("Malformed OJN file.");
+
+    const uint8_t* pPtr = buffer;
 
     // OJN Note Set parse loop
     for (unsigned j = 0; j < ojn_header.numNoteSets[chart_index]; j++)
     {
-        OJN_NoteSet_Header *pNoteSet = (OJN_NoteSet_Header*)pPtr;
+        OJN_NoteSet_Header* pNoteSet = (OJN_NoteSet_Header*)pPtr;
         pPtr += sizeof(OJN_NoteSet_Header);
 
         uint32_t iMeasure  = pNoteSet->Measure;
@@ -224,7 +225,7 @@ void O2JamChart::load_chart ()
 
                         // Note Type safeguard
                         if (Type >= 8) {
-                            printf("[debug] Fixing invalid note type. \n");
+                            fprintf(stderr, "[debug] Fixing invalid note type. \n");
                             Type = Type % 8;
                         }
 
@@ -245,9 +246,9 @@ void O2JamChart::load_chart ()
                                 Note_Single* pNote = new Note_Single(nChannel, time, SmplID, Vol, Pan);
                                 pMeasure->addNote(pNote);
                                 cAN++, cSN++;
-                                printf("[debug] Parsing to Hold Note in Autoplay Channel as Normal Note. \n");
+                                fprintf(stderr, "[debug] Parsing to Hold Note in Autoplay Channel as Normal Note. \n");
                             } else if (Type == 3) {
-                                printf("[debug] Skipping Release Note in Autoplay Channel. \n");
+                                fprintf(stderr, "[debug] Skipping Release Note in Autoplay Channel. \n");
                             } else {
                                 Note_Single* pNote = new Note_Single(nChannel, time, SmplID, Vol, Pan);
                                 pMeasure->addNote(pNote);
@@ -371,8 +372,8 @@ static void decrypt_arrange (uint8_t *&sData, unsigned int sSize)
 void parseM30 (clan::File& file, SampleMap& sample_map)
 {
     const int fileSize = file.get_size();
-    const int headSize = sizeof(M30_File_Header);   // 32 - 4 (signature) = 28
-    const int M30hSize = sizeof(M30_Sample_Header); // 52 bytes
+    constexpr int headSize = sizeof(M30_File_Header);   // 32 - 4 (signature) = 28
+    constexpr int M30hSize = sizeof(M30_Sample_Header); // 52 bytes
 
     file.seek(0);
 
@@ -380,13 +381,10 @@ void parseM30 (clan::File& file, SampleMap& sample_map)
     uint8_t* buffer = new uint8_t[headSize];
     int read = file.read(buffer, headSize);
     if (read != headSize)
-        delete[] buffer;
-
-    const uint8_t *pPtr = buffer;
+        throw std::runtime_error("Malformed OJM file.");
 
     // read header
-    M30_File_Header *pFileHeader = (M30_File_Header*)pPtr;
-    pPtr += headSize;
+    M30_File_Header *pFileHeader = (M30_File_Header*)buffer;
 
     uint32_t smplEncryption = pFileHeader->encryption;
     uint32_t smplCount      = pFileHeader->samples;
@@ -396,27 +394,25 @@ void parseM30 (clan::File& file, SampleMap& sample_map)
     delete[] buffer;
 
     if (packSize > fileSize - smplOffset) {
-        printf("[debug] Different payload size reported by header.\n");
+        fprintf(stderr, "[debug] Header reports different payload size.\n");
         packSize = fileSize - smplOffset;
     }
 
     // Jump to payload location
     file.seek(smplOffset);
 
-    // create read buffer
-    buffer = new uint8_t[packSize];
-    read = file.read(buffer, packSize);
-    if (read != (int)packSize)
-        delete[] buffer;
-
-    pPtr = buffer;
-
     for (unsigned int i = 0; i < smplCount; i++)
     {
-        // read sample header
-        M30_Sample_Header *pSmplHeader = (M30_Sample_Header*)pPtr;
-        pPtr += M30hSize;
+        // Read M30 sample header
+        buffer = new uint8_t[M30hSize];
+        read = file.read(buffer, M30hSize);
+        if (read != M30hSize) {
+            fprintf(stderr, "[debug] Fatal OJM file read error.\n");
+            delete[] buffer;
+            break;
+        }
 
+        M30_Sample_Header *pSmplHeader = (M30_Sample_Header*)buffer;
 
         std::string smplName = pSmplHeader->name;
         smplName.append(".ogg");
@@ -425,8 +421,14 @@ void parseM30 (clan::File& file, SampleMap& sample_map)
         uint16_t smplType = pSmplHeader->type;
         uint16_t smplID   = pSmplHeader->id+1;
 
-        uint8_t* pSmplData = (uint8_t*)pPtr;
-        pPtr += smplSize;
+        delete[] buffer;
+
+        buffer = new uint8_t[smplSize];
+        read = file.read(buffer, smplSize);
+        if (read != (int)smplSize)
+            delete[] buffer;
+
+        uint8_t* pSmplData = buffer;
 
         // decode sample
         switch (smplEncryption) {
@@ -447,15 +449,13 @@ void parseM30 (clan::File& file, SampleMap& sample_map)
         Sample* pSample = new Sample((char*)pSmplData, smplSize, smplName.c_str());
 
         if (pSample->getSource() == nullptr)
-            printf("[warn] Failed to load M30 sample: %s\n", smplName.c_str());
+            fprintf(stderr, "[warn] Failed to load M30 sample: %s\n", smplName.c_str());
         else
             sample_map[smplID] = pSample;
 
+        delete[] buffer;
     }
 
-
-    // clean up
-    delete[] buffer;
 }
 
 
@@ -463,10 +463,10 @@ void parseM30 (clan::File& file, SampleMap& sample_map)
 void parseOMC (clan::File& file, bool isEncrypted, SampleMap& sample_map)
 {
     // read headers
-    long fileSize = file.get_size();
-    const long headSize = sizeof(OMC_File_Header);
-    const long WAVhSize = sizeof(OMC_WAV_Header);
-    const long OGGhSize = sizeof(OMC_OGG_Header);
+    int fileSize = file.get_size();
+    constexpr int headSize = sizeof(OMC_File_Header);
+    constexpr int WAVhSize = sizeof(OMC_WAV_Header);
+    constexpr int OGGhSize = sizeof(OMC_OGG_Header);
 
     file.seek(0);
 
@@ -474,12 +474,10 @@ void parseOMC (clan::File& file, bool isEncrypted, SampleMap& sample_map)
     uint8_t* buffer = new uint8_t[headSize];
     int read = file.read(buffer, headSize);
     if (read != headSize)
-        delete[] buffer;
+        throw std::runtime_error("Malformed OJM file.");
 
     // read header
-    const uint8_t *pPtr = (uint8_t*)((void*)buffer);
-    OMC_File_Header *pFileHeader = (OMC_File_Header*)pPtr;
-    pPtr += headSize;
+    OMC_File_Header *pFileHeader = (OMC_File_Header*)buffer;
 
     // Sample ID counter
     uint16_t smplID;
@@ -514,10 +512,12 @@ void parseOMC (clan::File& file, bool isEncrypted, SampleMap& sample_map)
 
         buffer = new uint8_t[WAV_PackSize];
         read = file.read(buffer, WAV_PackSize);
-        if (read != (int)WAV_PackSize)
+        if (read != (int)WAV_PackSize) {
+            fprintf(stderr, "[debug] Fatal OJM file read error.\n");
             delete[] buffer;
+        }
 
-        pPtr = (uint8_t*)((void*)buffer);
+        uint8_t* pPtr = buffer;
 
         smplID = 0; // WAV
 
@@ -527,8 +527,7 @@ void parseOMC (clan::File& file, bool isEncrypted, SampleMap& sample_map)
         {
             // read WAV header
             OMC_WAV_Header *pWAVHeader = (OMC_WAV_Header*)pPtr;
-            pPtr += WAVhSize;
-            i += WAVhSize;
+            pPtr += WAVhSize, i += WAVhSize;
             smplID++;
 
 
@@ -551,9 +550,8 @@ void parseOMC (clan::File& file, bool isEncrypted, SampleMap& sample_map)
             if (SampleSize > 0 || numChannels > 0)
             {
                 // rip PCM data
-                uint8_t *pSmplData = (uint8_t*)pPtr;
-                pPtr += SampleSize;
-                i += SampleSize;
+                uint8_t* pSmplData = pPtr;
+                pPtr += SampleSize, i += SampleSize;
 
                 // decrypt data
                 if (isEncrypted) {
@@ -588,7 +586,7 @@ void parseOMC (clan::File& file, bool isEncrypted, SampleMap& sample_map)
                 Sample* pSample = new Sample((char*)pSmplData, SampleSize, SampleName.c_str());
 
                 if (pSample->getSource() == nullptr)
-                    printf("[warn] Failed to load OMC WAV sample: %s\n", SampleName.c_str());
+                    fprintf(stderr, "[warn] Failed to load OMC WAV sample: %s\n", SampleName.c_str());
                 else
                     sample_map[smplID] = pSample;
 
@@ -615,18 +613,15 @@ void parseOMC (clan::File& file, bool isEncrypted, SampleMap& sample_map)
         if (read != (int)OGG_PackSize)
             delete[] buffer;
 
-        pPtr = (uint8_t*)((void*)buffer);
+        uint8_t* pPtr = buffer;
 
         smplID = 1000;
 
-        unsigned long i = 0;
-
-        while (i < OGG_PackSize)
+        for(unsigned long i = 0; i < OGG_PackSize; )
         {
-            // read OGG header
+            // read header
             OMC_OGG_Header *pOGGHeader = (OMC_OGG_Header*)pPtr;
-            pPtr += OGGhSize;
-            i += OGGhSize;
+            pPtr += OGGhSize, i += OGGhSize;
 
             smplID++;
 
@@ -634,16 +629,13 @@ void parseOMC (clan::File& file, bool isEncrypted, SampleMap& sample_map)
             uint32_t    SampleSize = pOGGHeader->size;
 
             if (SampleSize != 0) {
-                // rip OGG/MP3 data
-                uint8_t *pSmplData = (uint8_t*)pPtr;
-                pPtr += SampleSize;
-                i += SampleSize;
+                uint8_t* pSmplData = pPtr;
+                pPtr += SampleSize, i += SampleSize;
 
-                // pass into OGG stream
                 Sample* pSample = new Sample((char*)pSmplData, SampleSize, SampleName.c_str());
 
                 if (pSample->getSource() == nullptr)
-                    printf("[warn] Failed to load OMC OGG sample: %s\n", SampleName.c_str());
+                    fprintf(stderr, "[warn] Failed to load OMC M sample: %s\n", SampleName.c_str());
                 else
                     sample_map[smplID] = pSample;
 
@@ -664,27 +656,17 @@ void O2JamChart::load_samples()
                 ) == false)
         throw std::invalid_argument("Failed to open OJM file.");
 
-    // create read buffer
-    uint32_t* buffer = new uint32_t[4]();
-    int read = file.read(buffer, 4);
-    if (read != 4) {
-        delete[] buffer;
-        return;
-    }
+    if (file.get_size() < 4)
+        throw std::invalid_argument("Malformed OJM file.");
 
-    // read signature
-    uint32_t pSignature = *buffer;
-
-    // clean up
-    delete[] buffer;
-
-    // test signature
-    switch (pSignature)
+    // Read file based on signature
+    uint32_t signature = file.read_uint32();
+    switch (signature)
     {
         case OJM_SIGNATURE: parseOMC(file, false, sample_map); break;
         case OMC_SIGNATURE: parseOMC(file, true , sample_map); break;
         case M30_SIGNATURE: parseM30(file, sample_map); break;
-        default: printf("[warn] Unknown OJM signature. \n");
+        default: fprintf(stderr, "[warn] Unknown OJM signature. \n");
     }
 
     this->samples_loaded = true;
