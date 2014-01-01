@@ -16,28 +16,50 @@ namespace UI {
 
 class FFT : public clan::GUIComponent
 {
+public:
+    enum class IEWindowType : std::uint8_t
+    {
+        HANNING     = 'H',
+        LANCZOS     = 'L',
+        RECTANGULAR = 'R'
+    };
+
+    enum class IEScaleType : std::uint8_t
+    {
+        LINEAR = 'L',
+        DBFS   = 'D',
+        CUBIC  = 'C'
+    };
+
+    static std::vector<float> generate_window(IEWindowType const &window, ulong const &size);
+
 private:
-    std::mutex      mMutex; /// Master mutex
+    std::mutex      mMutex;     //! Master mutex
+
+    recti           mArea;      //! display area
+    ulong           mFrames;    //! number of frames to process
+    ulong           mBands;     //! number of bands to show
+    float           mFade;      //! decay strength
+
+    IEWindowType    mWindowType;
+    IEScaleType     mScaleType;
 
     kiss_fftr_cfg    kCl,  kCr; // KISSFFT config
     kiss_fft_scalar *kIl, *kIr; // input
     kiss_fft_cpx    *kOl, *kOr; // output
 
-    float*          mWindow;    // FFT window function coefficients
-    float*          mOutput;
-
-    ulong const     mFrames;
-    float           mFade;   // decay strength
-    recti           mArea;   // display area
-
 protected:
-    float   mDecayPeriod;   // decay over time
+    std::vector<float>  mWindow;    // FFT window function coefficients
+    awe::AfBuffer       mOutput;
+    awe::AfBuffer       mSpectrum;  // output spectrum to be drawn
 
-    ulong   mBands;     // number of bands to show
-    float*  mBandX;     // linear to logarithmic table
-    float*  mSpectrum;  // output spectrum to be drawn
+    float           mDecayPeriod;   // decay over time
+    float           mScale;         // range of values to display (for log scale from 0db to x)
+    float           mRange;         // number of pixels
+    float           mMultiplier;    // the bands peak at around -5 dBFS, 
 
-    rectf*  mRects;
+    float*          mBandX;         // linear to logarithmic table
+    rectf*          mRects;
 
     void set_bands(ulong);
     void calc_rects();
@@ -48,7 +70,9 @@ public:
         ulong frames,
         ulong sample_rate,
         ulong bands,
-        float fade = 0.1f
+        float fade = 0.1f,
+        IEWindowType window = IEWindowType::HANNING,
+        IEScaleType  scale  = IEScaleType::DBFS
        );
     ~FFT();
 

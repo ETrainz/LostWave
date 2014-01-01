@@ -25,7 +25,11 @@ private:
     Asfloatf    chgain; // Calculated gain applied on each channel
 
 public:
-    enum class IEType : std::uint8_t { LINEAR, SINCOS };
+    enum class IEType : std::uint8_t
+    {
+        LINEAR = static_cast<std::uint8_t>('L'),
+        SINCOS = static_cast<std::uint8_t>('C')
+    };
 
     AscMixer(
             Afloat _vol = 1.0f,

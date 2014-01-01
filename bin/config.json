@@ -1,6 +1,6 @@
 {
     "video": {
-        "resolution": [ 640, 480 ],
+        "resolution": [ 800, 600 ],
         "fullscreen": false,
         "flip-interval": 1,
         "refresh-rate": 60
@@ -10,7 +10,7 @@
         "frame-rate": 512,
         "fft": {
             "bars": 512,
-            "fade": 0.1
+            "fade": 2
         }
     },
     "gui": {

@@ -71,7 +71,8 @@ MusicSelector::MusicSelector(clan::GUIComponent *parent, JSONReader &skin, Music
     mVtop(0),
     mVptr(0),
     mVprv  (-1),
-    mVstore(-1)
+    mVstore(-1),
+    mCindex(0)
     {
         clan::Canvas canvas = get_canvas();
 
@@ -88,17 +89,18 @@ MusicSelector::MusicSelector(clan::GUIComponent *parent, JSONReader &skin, Music
         func_input ().set(this, &MusicSelector::process_input);
     }
 
-Music* MusicSelector::get() const
+Chart* MusicSelector::get() const
 {
     if (mVptr < 0)
         return nullptr;
 
-    MusicList::const_iterator ip = mMusicList.begin(); // Selected item
+    MusicList::const_iterator ip = mMusicList.begin(); // Selected music
     for(int i=0; i<mVptr; ip++, i++);
 
-    // TODO Random music
+    ChartMap::const_iterator ic = (*ip)->charts.begin(); // Selected chart
+    for(int i=0; i<mCindex && ic!=(*ip)->charts.end(); ic++, i++);
 
-    return *ip;
+    return ic->second;
 }
 
 ////    GUI Component Callbacks    ////////////////////////////////
@@ -129,6 +131,14 @@ bool MusicSelector::process_input(const clan::InputEvent& event)
                     }
                     break;
 
+                case clan::InputCode::keycode_left:
+                    mCindex -= (mCindex <= 0) ? 0 : 1;
+                    break;
+
+                case clan::InputCode::keycode_right:
+                    mCindex += (mCindex >= 2) ? 0 : 1; // TODO Improve me
+                    break;
+
                 default:
                     return false;
             }
@@ -146,7 +156,6 @@ bool MusicSelector::process_input(const clan::InputEvent& event)
                     mVptr = mVstore;
                     exit_with_code(1);
                     return true;
-
                 case clan::InputCode::keycode_enter:
                     mVstore = mVptr;
                     // TODO Select random song
@@ -223,17 +232,26 @@ void MusicSelector::render(clan::Canvas& canvas, const recti& clip_rect)
             mAtf.draw_text(canvas, pos + mAto, (*ip)->title);
             pos += mAeo;
 
+            // Draw information about selected music/chart
+            Chart* chart;
+            {
+                ChartMap::const_iterator ic = (*ip)->charts.begin();
+
+                for(int i = 0; ic != (*ip)->charts.end() && i <= mCindex; i++, ic++)
+                    chart = ic->second; // Grab chart
+            }
+
             mSbf.draw_text(canvas, mSgo, (*ip)->genre);
             mSbf.draw_text(canvas, mSao, (*ip)->artist);
             mShf.draw_text(canvas, mSto, (*ip)->title);
             mSbf.draw_text(canvas, mSno,
-                    clan::string_format( "Charted by %1", (*ip)->charts[0]->getCharter())
+                    clan::string_format("Charted by %1", chart->getCharter())
                     );
             mSbf.draw_text(canvas, mSdo,
-                    clan::string_format("Level %1", (*ip)->charts[0]->getLevel())
+                    clan::string_format("Level %1", chart->getLevel())
                     );
             {
-                float const tempo = (*ip)->charts[0]->getTempo();
+                float const tempo = chart->getTempo();
                 clan::StringFormat f("%1.%2 BPM");
                 f.set_arg(1, static_cast<int>( tempo ));
                 f.set_arg(2, static_cast<int>((tempo - std::floor(tempo)) * 100.f), 2);

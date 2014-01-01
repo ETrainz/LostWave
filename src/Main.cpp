@@ -97,20 +97,25 @@ int App::main(std::vector<std::string> const &args)
                 [] (long const &value) -> bool { return value > 0 && value < 65536; }
                 );
 
+            float FFTfade = config.get_if_else_set(
+                &JSONReader::getDecimal, "audio.fft.fade", 1.0,
+                [] (double const &value) -> bool { return value > 0.0; }
+                );
+
             UI::FFT* FFTbg = new UI::FFT(game, game->get_geometry(),
                     game->am.getMasterTrack().getConfig().targetFrameCount,
                     game->am.getMasterTrack().getConfig().targetSampleRate,
-                    FFTbars, 0.1f
+                    FFTbars, FFTfade
                     );
             UI::FFT* FFTp1 = new UI::FFT(game, game->get_geometry(),
                     game->am.getMasterTrack().getConfig().targetFrameCount,
                     game->am.getMasterTrack().getConfig().targetSampleRate,
-                    FFTbars, 0.1f
+                    FFTbars, FFTfade
                     );
             UI::FFT* FFTp2 = new UI::FFT(game, game->get_geometry(),
                     game->am.getMasterTrack().getConfig().targetFrameCount,
                     game->am.getMasterTrack().getConfig().targetSampleRate,
-                    FFTbars, 0.1f
+                    FFTbars, FFTfade
                     );
 
             FFTbg->set_constant_repaint(true);
@@ -185,12 +190,9 @@ int App::main(std::vector<std::string> const &args)
                 MS.set_enabled(false);
                 MS.set_visible(false);
 
-                music = MS.get();
-
-                if (music == nullptr)
+                chart = MS.get();
+                if (chart == nullptr)
                     break;
-
-                chart = music->charts.begin()->second;
 
                 chart->load_art();
                 chart->load_samples();

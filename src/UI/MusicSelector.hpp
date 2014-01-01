@@ -47,10 +47,12 @@ private:
     int mLcounter;  // Pointer movement locking counter; time elapsed since pointer last moved.
 
     int mVcount;    // Maximum number of elements to display on UI
-    int mVtop;      // offset to top visible element
-    int mVptr;      // offset to currently selected element
+    int mVtop;      // Offset to top visible element
+    int mVptr;      // Offset to currently selected element
     int mVprv;      // Offset to previously selected element
     int mVstore;    // Storage for if user cancels
+
+    int mCindex;    // Selected chart level/index
 
     clan::Image mBGImg; // Current background image.
 
@@ -58,7 +60,7 @@ public:
     // Constructor
     MusicSelector(clan::GUIComponent *owner, JSONReader &skin, MusicList const &list);
 
-    Music* get() const;
+    Chart* get() const;
 
     ////    GUI Component Callbacks    ////////////////////////////////
     bool process_input(clan::InputEvent const &event);

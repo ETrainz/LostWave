@@ -46,6 +46,9 @@ inline Aint to_Aint (const Afloat &v)
         return std::min((int32_t)(v * 32767.0f),  32767);
 }
 
+/** Normalized linear magnitude (0.0f - 1.0f) to full-scale decibel */
+constexpr Afloat to_dBFS (const Afloat &v) { return 20.0f * log10(v); }
+constexpr Afloat dBFS_limit = to_dBFS(1.0f / 65535.0f);
 
 /**
  * A frame is a snapshot of all sound samples to and/or from all channels at
@@ -72,6 +75,12 @@ struct Aframe
     void operator-= (const T &v) { for (T& u : data) u -= v; }
     void operator*= (const T &v) { for (T& u : data) u *= v; }
     void operator/= (const T &v) { for (T& u : data) u /= v; }
+
+    template <typename Function>
+        void operator()(Function F) {
+            for (T &u : data)
+                F(u);
+        }
 
     template <size_t channels>
         Aframe operator+ (const Aframe<T, channels> &v) const {

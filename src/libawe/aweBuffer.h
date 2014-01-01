@@ -80,6 +80,14 @@ public:
             }
         }
 
+    Abuffer(unsigned char _channels, container_type const &_container) :
+        pcm_data(_container),
+        channels(_channels)
+        {
+            assert(_channels != 0);
+            assert(_container.size() % _channels == 0);
+        }
+
     Abuffer(const Abuffer &buffer) :
         pcm_data(buffer.cvector()),
         channels(buffer.getChannelCount())
@@ -107,7 +115,7 @@ public:
     inline       size_type getFrameSize   () const { return sizeof(T) * channels;        } /** @return size of a single frame          (in bytes)   */
 
     inline value_type    getSample (size_type pos = 0) const /** @return copy of sample in buffer at sample offset index or an uninitialized value if offset is out-of-bounds */
-    { return (pcm_data.size() > pos) ? pcm_data[pos] : value_type(); } 
+    { return (pcm_data.size() > pos) ? pcm_data[pos] : value_type(); }
     inline       pointer getFrame  (size_type pos = 0)       /** @return          pointer to frame in buffer at frame offset index or nullptr if offset is out-of-bounds */
     { return (pcm_data.size() > pos * channels) ? pcm_data.data() + (pos * channels) : nullptr; }
     inline const_pointer getFrame  (size_type pos = 0) const /** @return constant pointer to frame in buffer at frame offset index or nullptr if offset is out-of-bounds */
@@ -126,6 +134,21 @@ public:
         double y3 = get0Sample(pos + 2*channels);
 
         return interpolate_4p4o_4x_zform(t, y0, y1, y2, y3);
+    }
+
+    void setSample (size_type pos, value_type value)
+    { pcm_data[pos] = value; }
+
+    void setFrame  (size_type pos, value_type value)
+    {
+        for(size_type i=0; i<channels; ++i)
+            pcm_data[pos*channels  ] = value;
+    }
+
+    void setFrame  (size_type pos, const_pointer value)
+    {
+        for(size_type i=0; i<channels; ++i)
+            pcm_data[pos*channels+i] = value[i];
     }
 };
 

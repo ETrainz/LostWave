@@ -4,9 +4,48 @@
 #include "FFT.hpp"
 
 #define _USE_MATH_DEFINES
-#include <math.h>
+#include <cmath>
+#include <cstdlib>
 
 namespace UI {
+
+constexpr double _sinc(double const &x) { return sin(M_PI * x) / (M_PI * x); }
+constexpr double _lanczos_size = 3.0f;
+constexpr double _lanczos_sinc(double const &x)
+{
+    return
+        (x == 0.0)          ? 1.0 : (
+        (x > _lanczos_size) ? 0.0 : (
+            _sinc(x) * _sinc(x / _lanczos_size)
+        )
+        );
+}
+
+std::vector<float> FFT::generate_window(FFT::IEWindowType const &type, ulong const &size)
+{
+    std::vector<float> window(size);
+
+    switch (type)
+    {
+        case FFT::IEWindowType::LANCZOS:
+            for(ulong t = 0; t < size; ++t)
+                window[t] = _lanczos_sinc(static_cast<double>(2 * t) / static_cast<double>(size - 1) - 1.0);
+            break;
+
+        case FFT::IEWindowType::HANNING:
+            for(ulong t = 0; t < size; ++t)
+                window[t] = 0.5f * (1.0f - cos( 2.0f * M_PI * float(t) / (float(size) - 1.0f)));
+            break;
+
+        case FFT::IEWindowType::RECTANGULAR:
+            for(ulong t = 0; t < size; ++t)
+                window[t] = 1.0f;
+            break;
+    }
+
+    return window;
+}
+
 
 FFT::FFT(
     clan::GUIComponent *parent,
@@ -14,14 +53,23 @@ FFT::FFT(
     ulong frames,
     ulong sample_rate,
     ulong bands,
-    float fade
+    float fade,
+    IEWindowType window,
+    IEScaleType  scale
 ) : clan::GUIComponent(parent, { area, false }, "FFT"),
+    mArea       (area),
     mFrames     (frames - (frames % 2)),
     mFade       (fade),
+    mWindowType (window),
+    mScaleType  (scale),
+    mWindow     (generate_window(window, mFrames)),
+    mOutput     (2, mFrames),
+    mSpectrum   (2, bands),
+    mScale      (1.0f), // ~ -64.22dB to -inf is ignored.
+    mRange      (-awe::dBFS_limit / mScale),
+    mBands      (0),
     mBandX      (nullptr),
-    mSpectrum   (nullptr),
-    mRects      (nullptr),
-    mArea       (area)
+    mRects      (nullptr)
 {
     setSampleRate(sample_rate);
 
@@ -32,22 +80,7 @@ FFT::FFT(
     kIr = (kiss_fft_scalar*)calloc(mFrames, sizeof(kiss_fft_scalar));
 
     kOl = (kiss_fft_cpx*)calloc(mFrames, sizeof(kiss_fft_cpx));
-    kOr = (kiss_fft_cpx*)calloc(frames, sizeof(kiss_fft_cpx));
-
-    mOutput = (float*)calloc(mFrames, sizeof(float));
-
-    // Generate FFT window
-    mWindow = (float*)calloc(mFrames, sizeof(float));
-    for (ulong t = 0; t < mFrames; ++t)
-    {
-        // Lanczos sinc
-        // window[t] = sin(M_PI * (2.0f * float(t) / (float(frames - 1) - 1.0f));
-        // window[t] = sin(a) / a;
-
-        // Hanning
-        mWindow[t]  = 1.0f - cos( 2.0f * M_PI * float(t) / (float(mFrames) - 1.0f));
-        mWindow[t] *= 0.5f;
-    }
+    kOr = (kiss_fft_cpx*)calloc(mFrames, sizeof(kiss_fft_cpx));
 
     // Calculate band translation table
     set_bands(bands);
@@ -59,14 +92,10 @@ FFT::~FFT ()
 {
     if (mBandX != nullptr)
         delete[] mBandX;
-    if (mSpectrum != nullptr)
-        delete[] mSpectrum;
 
     kiss_fftr_free(kCl);
     kiss_fftr_free(kCr);
 
-    free(mOutput);
-    free(mWindow);
     free(kIl);
     free(kIr);
     free(kOl);
@@ -76,20 +105,17 @@ FFT::~FFT ()
 void FFT::setSampleRate(ulong rate)
 {
     mDecayPeriod =
-        (2.0f * static_cast<float>(mFrames))
-        / (mFade * static_cast<float>(rate));
+        mFade * (static_cast<float>(mFrames) / static_cast<float>(rate));
 }
 
 void FFT::set_bands(ulong n)
 {
     if (mBandX != nullptr)
         delete[] mBandX;
-    if (mSpectrum != nullptr)
-        delete[] mSpectrum;
 
-    mBands       = n;
-    mBandX       = new float[1 + n];
-    mSpectrum    = new float[2 * mBands]();
+    mBands = n;
+    mBandX = new float[1 + n];
+    mSpectrum.reset();
 
     for(ulong i = 0; i <= n; ++i)
         mBandX[i] = powf(
@@ -130,10 +156,10 @@ void FFT::calc_FFT(const awe::AfBuffer& buffer)
     kiss_fftr( kCl , kIl , kOl );
     kiss_fftr( kCr , kIr , kOr );
 
-    ulong const actualFrames = mFrames / 2; /* Look for: Nyquist Theorem */
+    ulong const n = mFrames / 2; /* Look for: Nyquist Theorem */
 
     /* Get magnitude of FFT */
-    for (ulong t = 0; t < actualFrames; ++t)
+    for (ulong t = 0; t < n; ++t)
     {
         float rl, il, rr, ir;
 
@@ -143,13 +169,8 @@ void FFT::calc_FFT(const awe::AfBuffer& buffer)
         rr = kOr[t].r;
         ir = kOr[t].i;
 
-        // output[t*2  ] = pow(rl*rl + il*il, 1.0/3.0);
-        // output[t*2+1] = pow(rr*rr + ir*ir, 1.0/3.0);
-        // output[t*2  ] = 10.0f * log10(rl*rl + il*il);
-        // output[t*2+1] = 10.0f * log10(rr*rr + ir*ir);
-
-        mOutput[t*2  ] = rl * rl + il * il;
-        mOutput[t*2+1] = rr * rr + ir * ir;
+        mOutput.data()[t*2  ] = powf((rl*rl + il*il) / (n*n), 0.5f);
+        mOutput.data()[t*2+1] = powf((rr*rr + ir*ir) / (n*n), 0.5f);
     }
 }
 
@@ -166,42 +187,57 @@ void FFT::update(awe::AfBuffer const& buffer)
         {
             unsigned a = ceil (mBandX[i  ]);
             unsigned b = floor(mBandX[i+1]);
-            unsigned c = a + 1;
-            unsigned d = b + 1;
+            unsigned c = a - 1;
 
-            float nl = 0, nr = 0;
+            awe::Asfloatf n({ 0.0f, 0.0f });
+            awe::Asfloatf o(mSpectrum.getFrame(i));
 
             if (b < a) {
-                nl += mOutput[d*2  ] * (mBandX[i+1] - mBandX[i]),
-                      nr += mOutput[d*2+1] * (mBandX[i+1] - mBandX[i]);
+                n[0] += mOutput.getSample(b*2  ) * (mBandX[i+1] - mBandX[i]),
+                n[1] += mOutput.getSample(b*2+1) * (mBandX[i+1] - mBandX[i]);
             } else {
                 if (a > 0)
-                    nl += mOutput[(c-1)*2  ] * (a - mBandX[i]),
-                          nr += mOutput[(c  )*2-1] * (a - mBandX[i]);
+                    n[0] += mOutput.getSample(c*2  ) * (a - mBandX[i]),
+                    n[1] += mOutput.getSample(c*2+1) * (a - mBandX[i]);
 
                 for (; a < b; a++)
-                    nl += mOutput[c*2  ],
-                          nr += mOutput[c*2+1];
+                    n[0] += mOutput.getSample(a*2  ),
+                    n[1] += mOutput.getSample(a*2+1);
 
                 if (b < mBands)
-                    nl += mOutput[d*2  ] * (mBandX[i+1] - b),
-                          nr += mOutput[d*2+1] * (mBandX[i+1] - b);
+                    n[0] += mOutput.getSample(b*2  ) * (mBandX[i+1] - b),
+                    n[1] += mOutput.getSample(b*2+1) * (mBandX[i+1] - b);
             }
 
-            if (nl > 0)
-                nl = powf(nl, 1.0f/3.0f) * 48.0f;
-            else
-                nl = 0.0f;
+            switch (mScaleType)
+            {
+                case FFT::IEScaleType::DBFS:
+                    n( [this] (float &x) {
+                            x = 20.0f * log10(x);
+                            x = (x == x) ? ( (x > -mRange) ? (x + mRange) : 0.0 ) : 0.0;
+                            } );
+                    break;
 
-            if (nr > 0)
-                nr = powf(nr, 1.0f/3.0f) * 48.0f;
-            else
-                nr = 0.0f;
+                case FFT::IEScaleType::CUBIC:
+                    n( [] (float &x) { x = powf(x, 1.0f/3.0f); });
+                    n *= mRange;
+                    break;
 
-            float Ol = mSpectrum[i*2  ];
-            float Or = mSpectrum[i*2+1];
-            mSpectrum[i*2  ] = Ol - Ol * mDecayPeriod + nl * mDecayPeriod;
-            mSpectrum[i*2+1] = Or - Or * mDecayPeriod + nr * mDecayPeriod;
+                case FFT::IEScaleType::LINEAR:
+                    n *= mRange * 2.0f;
+                    break;
+            }
+
+            o[0] -= mRange * mDecayPeriod,
+            o[1] -= mRange * mDecayPeriod;
+
+            o[0] = o[0] > 0.0f ? o[0] : 0.0f,
+            o[1] = o[1] > 0.0f ? o[1] : 0.0f;
+
+            n[0] = n[0] > o[0] ? n[0] : o[0],
+            n[1] = n[1] > o[1] ? n[1] : o[1];
+
+            mSpectrum.setFrame(i, n.data.data());
         }
     }
 }
@@ -214,14 +250,37 @@ void FFT::render(clan::Canvas &canvas, recti const &clip_rect)
 
     if (is_enabled())
     {
+        // Draw metering lines
+        canvas.draw_line(
+            canvas.get_width() / 2, 0,
+            canvas.get_width() / 2, canvas.get_height(),
+            clan::Colorf(1.0f, 1.0f, 1.0f, 0.05f)
+        );
+
+        for(int i = 1; i <= 5; ++i)
+        {
+            canvas.draw_line(
+                canvas.get_width() / 2 - (i * 24.0f), 0,
+                canvas.get_width() / 2 - (i * 24.0f), canvas.get_height(),
+                clan::Colorf(1.0f, 1.0f, 1.0f, 0.01f)
+            );
+            canvas.draw_line(
+                canvas.get_width() / 2 + (i * 24.0f), 0,
+                canvas.get_width() / 2 + (i * 24.0f), canvas.get_height(),
+                clan::Colorf(1.0f, 1.0f, 1.0f, 0.01f)
+            );
+        }
+
+        // Draw spectrum
         clan::ColorHSVf color(0.0f, 1.0f, 1.0f, 0.1f);
         float inc = 270.0f / mBands;
+
         for(ulong i = 0; i < mBands; ++i)
         {
-            color.h += inc;
+            color.h   += inc;
             rectf out  = mRects[i];
-            out.left  -= mSpectrum[i*2  ];
-            out.right += mSpectrum[i*2+1];
+            out.left  -= mSpectrum.getSample(i*2  );
+            out.right += mSpectrum.getSample(i*2+1);
             canvas.fill_rect(out, color);
         }
     }
