@@ -25,6 +25,8 @@ IF(ClanLib_INCLUDE_DIRS)
     SET(ClanLib_FIND_QUIETLY TRUE)
 ENDIF(ClanLib_INCLUDE_DIRS)
 
+
+
 IF(NOT ClanLib_FIND_COMPONENTS)
     SET(ClanLib_FIND_COMPONENTS  App GameIDE Network Sound  Display Scene3D GL SWRender CSSLayout GUI  Compute Physics2D Physics3D  Database Sqlite)
 ENDIF(NOT ClanLib_FIND_COMPONENTS)
@@ -45,8 +47,24 @@ ENDMACRO(ClanLib_ERR)
 
 MACRO(ClanLib_FIND_COMPONENT COMPONENT)
     ClanLib_MSG("Checking for Clan${COMPONENT}")
-    FIND_LIBRARY(ClanLib_${COMPONENT}_LIBRARY clan${ClanLib_MAJOR_VERSION}${ClanLib_MINOR_VERSION}${COMPONENT}
-        ${CLANLIB_ROOT_DIR}/lib /lib /usr/lib /usr/local/lib
+
+    FIND_LIBRARY(
+        ClanLib_${COMPONENT}_LIBRARY
+        NAMES
+            clan${ClanLib_MAJOR_VERSION}${ClanLib_MINOR_VERSION}${COMPONENT}
+			clan${COMPONENT}-dll-debug          clan${COMPONENT}-dll
+			clan${COMPONENT}-static-mtdll-debug clan${COMPONENT}-static-mtdll
+            clan${COMPONENT}-static-mt-debug    clan${COMPONENT}-static-mt
+			clan${COMPONENT}-dll-debug.lib          clan${COMPONENT}-dll.lib
+			clan${COMPONENT}-static-mtdll-debug.lib clan${COMPONENT}-static-mtdll.lib
+            clan${COMPONENT}-static-mt-debug.lib    clan${COMPONENT}-static-mt.lib
+        HINTS
+			${ClanLib_LIBRARY_DIRS}
+            ${CLANLIB_ROOT_DIR}/lib
+            ${CLANLIB_ROOT_DIR}/lib/Win32
+            /lib
+            /usr/lib
+            /usr/local/lib
         DOC "Library name for clan${COMPONENT}.")
     IF(ClanLib_${COMPONENT}_LIBRARY)
         SET(ClanLib_${COMPONENT}_FOUND TRUE)

@@ -47,17 +47,17 @@ public:
     inline Afloat ffdoL(Afloat const &l) { Afloat L = l; for(AscFilter* filter : filters) filter->ffdoL(L); return L; }
     inline Afloat ffdoR(Afloat const &r) { Afloat R = r; for(AscFilter* filter : filters) filter->ffdoR(R); return R; }
 
-    inline Afloat ifdoM(Aint const &m) { Aint M = m; for(AscFilter* filter : filters) filter->ifdoM(M); return M; }
-    inline Afloat ifdoL(Aint const &l) { Aint L = l; for(AscFilter* filter : filters) filter->ifdoL(L); return L; }
-    inline Afloat ifdoR(Aint const &r) { Aint R = r; for(AscFilter* filter : filters) filter->ifdoR(R); return R; }
+    inline Afloat ifdoM(Aint const &m) { Aint M = m; for(AscFilter* filter : filters) filter->iidoM(M); return to_Afloat(M); }
+    inline Afloat ifdoL(Aint const &l) { Aint L = l; for(AscFilter* filter : filters) filter->iidoL(L); return to_Afloat(L); }
+    inline Afloat ifdoR(Aint const &r) { Aint R = r; for(AscFilter* filter : filters) filter->iidoR(R); return to_Afloat(R); }
 
     inline Aint iidoM(Aint const &m) { Aint M = m; for(AscFilter* filter : filters) filter->iidoM(M); return M; }
     inline Aint iidoL(Aint const &l) { Aint L = l; for(AscFilter* filter : filters) filter->iidoL(L); return L; }
     inline Aint iidoR(Aint const &r) { Aint R = r; for(AscFilter* filter : filters) filter->iidoR(R); return R; }
 
-    inline Aint fidoM(Afloat const &m) { Afloat M = m; for(AscFilter* filter : filters) filter->fidoM(M); return M; }
-    inline Aint fidoL(Afloat const &l) { Afloat L = l; for(AscFilter* filter : filters) filter->fidoL(L); return L; }
-    inline Aint fidoR(Afloat const &r) { Afloat R = r; for(AscFilter* filter : filters) filter->fidoR(R); return R; }
+    inline Aint fidoM(Afloat const &m) { Afloat M = m; for(AscFilter* filter : filters) filter->ffdoM(M); return to_Aint(M); }
+    inline Aint fidoL(Afloat const &l) { Afloat L = l; for(AscFilter* filter : filters) filter->ffdoL(L); return to_Aint(L); }
+    inline Aint fidoR(Afloat const &r) { Afloat R = r; for(AscFilter* filter : filters) filter->ffdoR(R); return to_Aint(R); }
 
     inline Asfloatf ffdoF(Asfloatf const &f) { Asfloatf F = f; for(AscFilter* filter : filters) filter->ffdoF(F); return F; }
     inline Asintf   iidoF(Asintf   const &f) { Asintf   F = f; for(AscFilter* filter : filters) filter->iidoF(F); return F; }

@@ -64,7 +64,7 @@ public:
         SampleMap::iterator i = mSampleMap.find(index);
         return (i != mSampleMap.end()) ? i->second : nullptr;
     }
-    inline Track * getTrack (ulong index)
+    inline Track * getTrack (uchar index)
     {
         TrackMap ::iterator i = mTrackMap .find(index);
         return (i != mTrackMap .end()) ? i->second : nullptr;

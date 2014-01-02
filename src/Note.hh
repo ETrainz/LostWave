@@ -35,13 +35,13 @@ inline bool  ENKey_isAutoPlay(ENKey const &key) {
 
 inline bool  ENKey_isPlayer1(ENKey const &key) {
     return
-        (static_cast<uint8_t>(key) >= static_cast<uint8_t>(ENKey::NOTE_P1_S)) and
+        (static_cast<uint8_t>(key) >= static_cast<uint8_t>(ENKey::NOTE_P1_S)) &&
         (static_cast<uint8_t>(key) <  static_cast<uint8_t>(ENKey::NOTE_P2_S));
 }
 
 inline bool  ENKey_isPlayer2(ENKey const &key) {
     return
-        (static_cast<uint8_t>(key) >= static_cast<uint8_t>(ENKey::NOTE_P2_S)) and
+        (static_cast<uint8_t>(key) >= static_cast<uint8_t>(ENKey::NOTE_P2_S)) &&
         (static_cast<uint8_t>(key) <  static_cast<uint8_t>(ENKey::NOTE_AUTO));
 }
 
@@ -131,7 +131,7 @@ split_notes_by_key(
 
     for(auto node : map)
         node.second.sort(
-                [ ] ( const NoteType* const &a, const NoteType* const &b ) -> bool
+                [] (const NoteType* const &a, const NoteType* const &b) -> bool
                 { return (a->getTime() < b->getTime()); }
                 );
 

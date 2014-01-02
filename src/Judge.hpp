@@ -7,13 +7,6 @@
 #include <cmath>
 #include <cstdio>
 
-#ifdef _MSC_VER /* Missing std::lround workaround. */
-__inline long lround(const double &number)
-{
-    return static_cast<long>(number < 0.0 ? ceil(number - 0.5) : floor(number + 0.5));
-}
-#endif
-
 /** Judge rankings */
 enum EJRank
 {
@@ -27,8 +20,8 @@ struct JScore
     long    score;  //! Score given
     long    delta;  //! Tick difference
 
-    constexpr JScore() : rank(NONE), score(0), delta(0) { }
-    constexpr JScore(EJRank const &R, long const &S, long const &D) : rank(R), score(S), delta(D) { }
+    /* constexpr */ JScore() : rank(NONE), score(0), delta(0) { }
+    /* constexpr */ JScore(EJRank const &R, long const &S, long const &D) : rank(R), score(S), delta(D) { }
 };
 
 

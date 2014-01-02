@@ -22,11 +22,11 @@ namespace UI {
 class Tracker : public clan::GUIComponent
 {
 public:
-    typedef typename std::map< ENKey, Note* >                   KeyNoteMap;
-    typedef typename std::map< ENKey, InputManager::KeyCode >   KeyInputMap;
-    typedef typename KeyInputMap::value_type                    KeyInputPair;
-    typedef typename std::list< KeyInputPair >                  KeyInputList;
-    typedef typename std::map< EJRank, int >                    RankScoreMap;
+    using KeyNoteMap    = std::map< ENKey, Note* >;
+    using KeyInputMap   = std::map< ENKey, InputManager::KeyCode >;
+    using KeyInputPair  = KeyInputMap::value_type;
+    using KeyInputList  = std::list< KeyInputPair >;
+    using RankScoreMap  = std::map< EJRank, int >;
 
 private:
     Judge           mJudge;

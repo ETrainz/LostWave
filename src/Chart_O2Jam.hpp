@@ -7,7 +7,7 @@
 #include "Chart.hpp"
 #include "Chart_O2Jam.hh"
 
-class Music;
+struct Music;
 
 namespace O2Jam {
 

@@ -17,14 +17,14 @@ namespace UI {
 class FFT : public clan::GUIComponent
 {
 public:
-    enum class IEWindowType : std::uint8_t
+    enum class IEWindowType : uint8_t
     {
         HANNING     = 'H',
         LANCZOS     = 'L',
         RECTANGULAR = 'R'
     };
 
-    enum class IEScaleType : std::uint8_t
+    enum class IEScaleType : uint8_t
     {
         LINEAR = 'L',
         DBFS   = 'D',

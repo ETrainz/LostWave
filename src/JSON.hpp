@@ -156,8 +156,8 @@ public:
             try {
                 value = (this->*func)(path);
             } // TODO save value if fail
-            catch ( std::out_of_range  &exception) { value = default_value; }
-            catch (clan::JsonException &exception) { value = default_value; }
+            catch ( std::out_of_range ) { value = default_value; }
+            catch (clan::JsonException) { value = default_value; }
 
             return value;
         }
@@ -177,8 +177,8 @@ public:
                 value = (this->*func)(path);
                 value = p(value) ? value : default_value;
             } // TODO save value if fail
-            catch ( std::out_of_range  &exception) { value = default_value; }
-            catch (clan::JsonException &exception) { value = default_value; }
+            catch ( std::out_of_range ) { value = default_value; }
+            catch (clan::JsonException) { value = default_value; }
 
             return value;
         }

@@ -10,30 +10,28 @@
  * by the use of this software.
  */
 #include "3BEQ.h"
-#include <cmath>
 
 namespace awe {
 namespace Filter {
 
 Asc3BEQ::Asc3BEQ (
-        double mixfreq,
-        double lo_freq,
-        double hi_freq,
-        double lo_gain,
-        double mi_gain,
-        double hi_gain
-        ) :
-    lf(2.0 * sin(M_PI * lo_freq / mixfreq)),
-    hf(2.0 * sin(M_PI * hi_freq / mixfreq)),
-    lg(lo_gain),
-    mg(mi_gain),
-    hg(hi_gain),
-    llp{0.0, 0.0, 0.0, 0.0},
-    lhp{0.0, 0.0, 0.0, 0.0},
-    rlp{0.0, 0.0, 0.0, 0.0},
-    rhp{0.0, 0.0, 0.0, 0.0},
-    la{0.0, 0.0, 0.0},
-    ra{0.0, 0.0, 0.0}
+    double mixfreq,
+    double lo_freq,
+    double hi_freq,
+    double lo_gain,
+    double mi_gain,
+    double hi_gain
+)   : lf(2.0 * sin(M_PI * lo_freq / mixfreq))
+    , hf(2.0 * sin(M_PI * hi_freq / mixfreq))
+    , lg(lo_gain)
+    , mg(mi_gain)
+    , hg(hi_gain)
+    , llp({ 0.0, 0.0, 0.0, 0.0 })
+    , lhp({ 0.0, 0.0, 0.0, 0.0 })
+    , rlp({ 0.0, 0.0, 0.0, 0.0 })
+    , rhp({ 0.0, 0.0, 0.0, 0.0 })
+    , la({ 0.0, 0.0, 0.0 })
+    , ra({ 0.0, 0.0, 0.0 })
 {}
 
 Afloat Asc3BEQ::ffdoL(Afloat const &l)

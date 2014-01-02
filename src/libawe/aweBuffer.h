@@ -4,33 +4,35 @@
 #ifndef AWE_BUFFER_H
 #define AWE_BUFFER_H
 
-#include <cassert>
-#include <cmath>
-
 #include "aweDefine.h"
+
+#include <cassert>
+#include <type_traits>
 
 namespace awe {
 
-/** Audio data container class.
- * This class is used to contain PCM audio data.
+/** Audio data container class with interweaving channels
+ * This class is used to contain audio data.
  */
-template <typename T> class Abuffer
+template< typename T >
+class Abuffer
 {
 private:
-    std::vector<T>      pcm_data;
-    const unsigned char channels;
+    unsigned char  channels;
+    std::vector<T> pcm_data;
 
 public:
-    /* Derive useful std::vector types and functions */
-    typedef typename std::vector<T>                     container_type;
-    typedef typename container_type::value_type         value_type;
-    typedef typename container_type::size_type          size_type;
-    typedef typename container_type::reference          reference;
-    typedef typename container_type::const_reference    const_reference;
-    typedef typename container_type::pointer            pointer;
-    typedef typename container_type::const_pointer      const_pointer;
-    typedef typename container_type::iterator           iterator;
-    typedef typename container_type::const_iterator     const_iterator;
+    ////    Derive everything from std::vector    //////////////////////
+    using container_type    = std::vector<T>;
+
+    using value_type        = typename container_type::value_type;
+    using size_type         = typename container_type::size_type;
+    using reference         = typename container_type::reference;
+    using const_reference   = typename container_type::const_reference;
+    using pointer           = typename container_type::pointer;
+    using const_pointer     = typename container_type::const_pointer;
+    using iterator          = typename container_type::iterator;
+    using const_iterator    = typename container_type::const_iterator;
 
     inline       container_type&  vector()       { return pcm_data; }
     inline const container_type& cvector() const { return pcm_data; }
@@ -66,45 +68,52 @@ public:
      * @param _frames   number of frames to reserve
      * @param _init     initialze samples in container or leave it empty?
      */
-    Abuffer(unsigned char _channels, size_type _frames, bool init = true) :
-        pcm_data(),
-        channels(_channels)
-        {
-            assert(channels != 0);
+    Abuffer(unsigned char _channels, size_type _frames, bool _init = true)
+        : channels(_channels)
+        , pcm_data()
+    {
+        assert(channels != 0 && "Cannot create awe::Abuffer with no channels");
 
-            if (init == true) {
-                pcm_data.reserve(_channels * _frames);
-                pcm_data.resize (_channels * _frames);
-            } else {
-                pcm_data.reserve(_channels * _frames);
-            }
+        if (_init == true) {
+            pcm_data.reserve(channels * _frames);
+            pcm_data.resize (channels * _frames);
+        } else {
+            pcm_data.reserve(channels * _frames);
         }
+    }
 
-    Abuffer(unsigned char _channels, container_type const &_container) :
-        pcm_data(_container),
-        channels(_channels)
-        {
-            assert(_channels != 0);
-            assert(_container.size() % _channels == 0);
-        }
+    /**
+     * Buffer from container constructor
+     * @param _channels  number of channels on buffer
+     * @param _container container to copy data from
+     */
+    template< class SourceIterator >
+    Abuffer(unsigned char _channels, SourceIterator &_begin, SourceIterator &_end)
+        : channels(_channels)
+        , pcm_data(_begin, _end)
+    {
+        assert(channels != 0 && "Cannot create awe::Abuffer with 0 channels");
+        assert(pcm_data.size() % channels == 0);
+    }
 
-    Abuffer(const Abuffer &buffer) :
-        pcm_data(buffer.cvector()),
-        channels(buffer.getChannelCount())
-        { }
+    /**
+     * Buffer copy constructor
+     * @param _other buffer to copy from
+     */
+    Abuffer(const Abuffer &_other)
+        : Abuffer(_other.getChannelCount(), _other.cbegin(), _other.cend())
+    { }
 
     ~Abuffer() { pcm_data.clear(); }
 
 
-    inline void reset(bool init = true)
+    void reset(bool init = true)
     {
-        if (init == true) {
-            size_type samples = (pcm_data.size() / channels) * channels;
-            pcm_data.clear();
+        size_type samples = (pcm_data.size() / channels) * channels;
+        pcm_data.clear();
+        pcm_data.reserve(samples);
+        if (init == true)
             pcm_data.resize(samples);
-        } else {
-            pcm_data.clear();
-        }
     }
 
     inline   unsigned char getChannelCount() const { return channels;                    } /** @return number of channels in the buffer             */
@@ -114,30 +123,55 @@ public:
     inline       size_type getFrameCount  () const { return pcm_data.size() / channels;  } /** @return number of frames in the buffer  (in frames)  */
     inline       size_type getFrameSize   () const { return sizeof(T) * channels;        } /** @return size of a single frame          (in bytes)   */
 
-    inline value_type    getSample (size_type pos = 0) const /** @return copy of sample in buffer at sample offset index or an uninitialized value if offset is out-of-bounds */
-    { return (pcm_data.size() > pos) ? pcm_data[pos] : value_type(); }
-    inline       pointer getFrame  (size_type pos = 0)       /** @return          pointer to frame in buffer at frame offset index or nullptr if offset is out-of-bounds */
-    { return (pcm_data.size() > pos * channels) ? pcm_data.data() + (pos * channels) : nullptr; }
-    inline const_pointer getFrame  (size_type pos = 0) const /** @return constant pointer to frame in buffer at frame offset index or nullptr if offset is out-of-bounds */
-    { return (pcm_data.size() > pos * channels) ? pcm_data.data() + (pos * channels) : nullptr; }
+    inline       pointer  getFrame (size_type pos = 0)       /** @return          pointer to frame in buffer at frame offset index or nullptr if offset is out-of-bounds */
+    { return (pcm_data.size() > pos * channels) ?            pcm_data.data() + (pos * channels) : nullptr; }
 
-    inline value_type    get0Sample(size_type pos = 0) const /** @return copy of sample in buffer at sample offset index or zero if offset is out-of-bounds */
+    inline const_pointer cgetFrame (size_type pos = 0) const /** @return constant pointer to frame in buffer at frame offset index or nullptr if offset is out-of-bounds */
+    { return (pcm_data.size() > pos * channels) ?            pcm_data.data() + (pos * channels) : nullptr; }
+
+    /** @return copy of frame in buffer at frame offset index or empty frame if offset is out-of-bounds */
+    template< unsigned char Channels >
+    Aframe<value_type, Channels> getFrame (size_type pos = 0) const
+    { return (pcm_data.size() > pos * channels)
+                ? Aframe<value_type, Channels>(pcm_data.data() + (pos * channels), channels) // initializes up to `channels` elements
+                : Aframe<value_type, Channels>();
+    }
+
+    inline value_type getSample (size_type pos = 0) const /** @return copy of sample in buffer at sample offset index or an uninitialized value if offset is out-of-bounds */
+    { return (pcm_data.size() > pos) ? pcm_data[pos] : value_type(); }
+
+    inline value_type get0Sample(size_type pos = 0) const /** @return copy of sample in buffer at sample offset index or zero if offset is out-of-bounds */
     { return (pcm_data.size() > pos) ? pcm_data[pos] : value_type(0); }
-    inline value_type    getiSample(double    pos = 0) const
+
+    inline value_type getiSample(double    pos = 0) const /** @return interpolated sample from buffer at sample offset or zero if offset is out-of-bounds */
     {
         size_type x = std::floor(pos);
         double    t = pos - x;
 
-        double y0 = get0Sample(pos - 1*channels);
-        double y1 = get0Sample(pos);
-        double y2 = get0Sample(pos + 1*channels);
-        double y3 = get0Sample(pos + 2*channels);
+        if (std::is_floating_point<value_type>::value)
+        {
+            double y0 = get0Sample(x - 1 * channels);
+            double y1 = get0Sample(x);
+            double y2 = get0Sample(x + 1 * channels);
+            double y3 = get0Sample(x + 2 * channels);
 
-        return interpolate_4p4o_4x_zform(t, y0, y1, y2, y3);
+            return interpolate_4p4o_4x_zform(t, y0, y1, y2, y3);
+        }
+        else
+        {
+            double y0 = to_Afloat(get0Sample(x - 1 * channels));
+            double y1 = to_Afloat(get0Sample(x));
+            double y2 = to_Afloat(get0Sample(x + 1 * channels));
+            double y3 = to_Afloat(get0Sample(x + 2 * channels));
+
+            return to_Aint(interpolate_4p4o_4x_zform(t, y0, y1, y2, y3));
+        }
     }
 
     void setSample (size_type pos, value_type value)
-    { pcm_data[pos] = value; }
+    {
+        pcm_data[pos] = value;
+    }
 
     void setFrame  (size_type pos, value_type value)
     {
@@ -150,9 +184,16 @@ public:
         for(size_type i=0; i<channels; ++i)
             pcm_data[pos*channels+i] = value[i];
     }
+
+    template< unsigned char Channels >
+    void setFrame  (size_type pos, const Aframe<value_type, Channels> value)
+    {
+        for(size_type i=0; i<std::min(Channels,channels); ++i)
+            pcm_data[pos*channels+i] = value[i];
+    }
 };
 
-typedef Abuffer<Aint>   AiBuffer;
+typedef Abuffer<Aint  > AiBuffer;
 typedef Abuffer<Afloat> AfBuffer;
 
 } // namespace awe

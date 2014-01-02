@@ -4,19 +4,19 @@
 #ifndef AWE_DEFINE
 #define AWE_DEFINE
 
+#define _USE_MATH_DEFINES
+#include <cmath>
+#include <cstdint>
+
 #include <algorithm>
 #include <array>
 #include <queue>
 
-#define _USE_MATH_DEFINES
-#include <math.h>
-#include <stdint.h>
-
 namespace awe {
 
 /* Basic datatypes */
-typedef int16_t Aint;
-typedef float   Afloat;
+using Aint   = int16_t;
+using Afloat = float;
 
 /* FIFO buffer */
 typedef std::queue<Afloat> AfFIFOBuffer;
@@ -25,7 +25,7 @@ typedef std::queue<Aint  > AiFIFOBuffer;
 #define IO_BUFFER_SIZE  16384   /** File IO buffer size */
 
 /** @return Afloat equivalent of Aint */
-inline Afloat to_Afloat (const Aint &v)
+inline const /* constexpr */ Afloat to_Afloat(const Aint &v)
 {
     if (v == 0)
         return 0;
@@ -36,39 +36,45 @@ inline Afloat to_Afloat (const Aint &v)
 }
 
 /** @return Aint equivalent of Afloat */
-inline Aint to_Aint (const Afloat &v)
+inline const /* constexpr */ Aint to_Aint(const Afloat &v)
 {
     if (v != v) // Abnormal floating point
         return 0;
     else if (v < 0)
-        return std::max((int32_t)(v * 32768.0f), -32768);
+        return std::max<int32_t>(static_cast<int32_t>(v * 32768.0f), -32768);
     else
-        return std::min((int32_t)(v * 32767.0f),  32767);
+        return std::min<int32_t>(static_cast<int32_t>(v * 32767.0f),  32767);
 }
 
 /** Normalized linear magnitude (0.0f - 1.0f) to full-scale decibel */
-constexpr Afloat to_dBFS (const Afloat &v) { return 20.0f * log10(v); }
-constexpr Afloat dBFS_limit = to_dBFS(1.0f / 65535.0f);
+inline const /* constexpr */ Afloat to_dBFS(const Afloat &v) { return 20.0f * log10(v); }
+static const /* constexpr */ Afloat dBFS_limit = to_dBFS(1.0f / 65535.0f);
+
 
 /**
  * A frame is a snapshot of all sound samples to and/or from all channels at
  * a specific time point. This structure is an expansion of the STL array to
  * support array/frame-wide algorithms and arithmetic.
  */
-template <typename T, size_t Channels>
+template< typename T, unsigned char Channels >
 struct Aframe
 {
-    typedef typename std::array<T, Channels> data_type;
+    using container_type = std::array< T, Channels >;
+    using value_type     = typename container_type::value_type;
 
-    data_type data;
+    container_type data;
 
-    Aframe() : data() {}
-    Aframe(const T         * _data) : data() { std::copy(_data, _data + Channels, data.begin()); }
-    Aframe(const data_type & _data) : data(_data) {}
-    Aframe(const data_type&& _data) : data(_data) {}
+    Aframe() : data() { }
+    Aframe(const T* _data, unsigned char _size = Channels) : data()
+    {
+        std::copy(_data, _data + std::min(_size, Channels), data.begin());
+    }
 
-    T       & operator[](size_t pos)       { return data[pos]; }
-    T const & operator[](size_t pos) const { return data[pos]; }
+    Aframe(const container_type&  _data) : data(_data) {}
+    Aframe(const container_type&& _data) : data(_data) {}
+
+    T       & operator[](unsigned char pos)       { return data[pos]; }
+    T const & operator[](unsigned char pos) const { return data[pos]; }
 
     /* ARITHMETIC */
     void operator+= (const T &v) { for (T& u : data) u += v; }
@@ -82,81 +88,81 @@ struct Aframe
                 F(u);
         }
 
-    template <size_t channels>
+    template< unsigned char channels >
         Aframe operator+ (const Aframe<T, channels> &v) const {
             Aframe f;
-            for (size_t c = 0; c < std::min(Channels,channels); ++c)
+            for (unsigned char c = 0; c < std::min<>(Channels, channels); ++c)
                 f.data[c] = data[c] + v[c];
             return f;
         }
-    template <size_t channels>
+    template< unsigned char channels >
         Aframe operator- (const Aframe<T, channels> &v) const {
             Aframe f;
-            for (size_t c = 0; c < std::min(Channels,channels); ++c)
+            for (unsigned char c = 0; c < std::min<>(Channels,channels); ++c)
                 f.data[c] = data[c] - v[c];
             return f;
         }
-    template <size_t channels>
+    template< unsigned char channels >
         Aframe operator* (const Aframe<T, channels> &v) const {
             Aframe f;
-            for (size_t c = 0; c < std::min(Channels,channels); ++c)
+            for (unsigned char c = 0; c < std::min<>(Channels,channels); ++c)
                 f.data[c] = data[c] * v[c];
             return f;
         }
-    template <size_t channels>
+    template< unsigned char channels >
         Aframe operator/ (const Aframe<T, channels> &v) const {
             Aframe f;
-            for (size_t c = 0; c < std::min(Channels,channels); ++c)
+            for (unsigned char c = 0; c < std::min<>(Channels, channels); ++c)
                 f.data[c] = data[c] / v[c];
             return f;
         }
 
-    template <size_t channels>
+    template< unsigned char channels >
         void operator+= (const Aframe<T, channels> &v) {
-            for (size_t c = 0; c < std::min(Channels,channels); ++c)
+            for (unsigned char c = 0; c < std::min<>(Channels, channels); ++c)
                 data[c] += v[c];
         }
 
-    template <size_t channels>
+    template< unsigned char channels >
         void operator-= (const Aframe<T, channels> &v) {
-            for (size_t c = 0; c < std::min(Channels,channels); ++c)
+            for (unsigned char c = 0; c < std::min<>(Channels, channels); ++c)
                 data[c] -= v[c];
         }
 
-    template <size_t channels>
+    template< unsigned char channels >
         void operator*= (const Aframe<T, channels> &v) {
-            for (size_t c = 0; c < std::min(Channels,channels); ++c)
-                data[c] *= v[c];
+            for (unsigned char c = 0; c < std::min<>(Channels, channels); ++c)
+                    data[c] *= v[c];
         }
 
-    template <size_t channels>
+    template< unsigned char channels >
         void operator/= (const Aframe<T, channels> &v) {
-            for (size_t c = 0; c < std::min(Channels,channels); ++c)
+            for (unsigned char c = 0; c < std::min<>(Channels, channels); ++c)
                 data[c] /= v[c];
         }
 
 
-    template <size_t channels>
+    template< unsigned char channels >
         void operator+= (const std::array<T, channels> &v) {
-            for (size_t c = 0; c < std::min(Channels,channels); ++c)
+            for (unsigned char c = 0; c < std::min<>(Channels, channels); ++c)
                 data[c] += v[c];
         }
 
-    template <size_t channels>
+    template< unsigned char channels >
         void operator-= (const std::array<T, channels> &v) {
-            for (size_t c = 0; c < std::min(Channels,channels); ++c)
+            for (unsigned char c = 0; c < std::min<>(Channels, channels); ++c)
                 data[c] -= v[c];
         }
 
-    template <size_t channels>
+    template< unsigned char channels >
         void operator*= (const std::array<T, channels> &v) {
-            for (size_t c = 0; c < std::min(Channels,channels); ++c)
+            for (unsigned char c = 0; c < std::min<>(Channels, channels); ++c)
                 data[c] *= v[c];
         }
 
-    template <size_t channels>
+    template< unsigned char channels >
         void operator/= (const std::array<T, channels> &v) {
-            for (size_t c = 0; c < std::min(Channels,channels); ++c)
+            for (unsigned char c = 0; c < std::min<>(Channels, channels); ++c)
                 data[c] /= v[c];
         }
 
@@ -165,20 +171,22 @@ struct Aframe
         for (T& u : data) { u = std::abs(u); }
     }
 
-    const T& max () const {
+#ifdef MSC_VER
+    const T& max() const {
         return *std::max_element(data.cbegin(), data.cend());
     }
 
-    const T& min () const {
+    const T& min() const {
         return *std::min_element(data.cbegin(), data.cend());
     }
+#endif
 
-    const T& absmax () const {
+    T absmax() const {
         auto v = std::minmax_element(data.cbegin(), data.cend());
         return std::max(std::fabs(*v.first), std::fabs(*v.second));
     }
 
-    const T& absmin () const {
+    T absmin () const {
         auto v = std::minmax_element(data.cbegin(), data.cend());
         return std::min(std::fabs(*v.first), std::fabs(*v.second));
     }
@@ -189,22 +197,12 @@ typedef Aframe<Aint  , 2> Asintf;       /** a stereo Aint frame   */
 typedef Aframe<Afloat, 2> Asfloatf;     /** a stereo Afloat frame */
 
 
-inline Asfloatf to_Asfloatf(const Asintf &i) {
-#ifdef _MSC_VER
-    Asfloatf::data_type f = { to_Afloat(i[0]), to_Afloat(i[1]) };
-    return Asfloatf(f);
-#else
-    return Asfloatf(Asfloatf::data_type{{to_Afloat(i[0]), to_Afloat(i[1])}});
-#endif
+inline const /* constexpr */ Asfloatf to_Asfloatf(const Asintf &i) {
+    return Asfloatf::container_type({ to_Afloat(i[0]), to_Afloat(i[1]) });
 }
 
-inline Asintf to_Asintf(const Asfloatf &f) {
-#ifdef _MSC_VER
-    Asintf::data_type i = { to_Aint(f[0]), to_Aint(f[1]) };
-    return Asintf(i);
-#else
-    return Asintf(Asintf::data_type{{to_Aint(f[0]), to_Aint(f[1])}});
-#endif
+inline const /* constexpr */ Asintf to_Asintf(const Asfloatf &f) {
+    return Asintf  ::container_type({ to_Aint  (f[0]), to_Aint  (f[1]) });
 }
 
 struct ArenderConfig

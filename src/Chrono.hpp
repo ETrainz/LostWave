@@ -17,7 +17,7 @@ struct TTime
     unsigned beat; // Beat
     unsigned measure; // Measure
 
-    constexpr TTime(unsigned _tick = 0, unsigned _beat = 0, unsigned _measure = 0) : tick(_tick), beat(_beat), measure(_measure) { }
+    /* constexpr */ TTime(unsigned _tick = 0, unsigned _beat = 0, unsigned _measure = 0) : tick(_tick), beat(_beat), measure(_measure) { }
 
     bool operator== (const TTime &cmpTTime) const;
     bool operator>= (const TTime &cmpTTime) const;
@@ -28,8 +28,6 @@ struct TTime
     inline void reset() { tick = beat = measure = 0; }
     inline void print() const { printf("%u:%u:%u", measure, beat, tick); }
 };
-
-constexpr TTime _0TTime(0, 0, 0);
 
 class TClock
 {

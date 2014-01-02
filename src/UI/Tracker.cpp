@@ -156,7 +156,7 @@ void Tracker::start() { mClock->start(); }
 void Tracker::update()
 {
     mClock->update();
-    mCurrentTick = mChart->compare_ticks(_0TTime, mTime);
+    mCurrentTick = mChart->compare_ticks(TTime(), mTime);
 
     if (mTime.measure > mChart->getMeasures()) {
         mChartEnded = true;
@@ -283,9 +283,9 @@ void Tracker::loop_Notes(NoteList &notes, uint &cache)
                 // It's in autoplay channel or background channel.
                     ENKey_isAutoPlay  (note->getKey())
                 // It's in session auto-key channel.
-                    or  mAutoKeys.find(note->getKey()) != mAutoKeys.cend()
+                    ||  mAutoKeys.find(note->getKey()) != mAutoKeys.cend()
                 // It's not on the list of selected keys.
-                    or  std::find(mShowKeys.begin(), mShowKeys.end(), note->getKey()) == mShowKeys.end()
+                    ||  std::find(mShowKeys.begin(), mShowKeys.end(), note->getKey()) == mShowKeys.end()
                 ) {
                     if (note->getTime() <= mTime)
                         note->update(*this, KeyStatus::AUTO);

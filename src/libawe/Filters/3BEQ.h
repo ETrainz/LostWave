@@ -12,8 +12,8 @@
 #ifndef AWE_FILTER_3BAND_EQ_H
 #define AWE_FILTER_3BAND_EQ_H
 
-#include <cassert>
 #include "../aweFilter.h"
+#include <cassert>
 
 namespace awe {
 namespace Filter {
@@ -24,20 +24,20 @@ private:
     double lf, hf; // Low-band and high-band frequencies
     double lg, mg, hg; // Low-band, mid-band and high-band gain
 
-    double llp[4], lhp[4]; // Low-band and high-band poles -- left
-    double rlp[4], rhp[4]; // Low-band and high-band poles -- right
-    double la [3], ra [3]; // Left and right sample accumulator
+    std::array<double, 4> llp, lhp; // Low-band and high-band poles -- left
+    std::array<double, 4> rlp, rhp; // Low-band and high-band poles -- right
+    std::array<double, 3> la , ra; // Left and right sample accumulator
 
     double const d = 1.0 / 4294967295.0; // Denormalization constant
 public:
     Asc3BEQ(
-            double mixfreq,
-            double lo_freq = 880.0,
-            double hi_freq = 5000.0,
-            double lo_gain = 1.0,
-            double mi_gain = 1.0,
-            double hi_gain = 1.0
-           );
+        double mixfreq,
+        double lo_freq = 880.0,
+        double hi_freq = 5000.0,
+        double lo_gain = 1.0,
+        double mi_gain = 1.0,
+        double hi_gain = 1.0
+   );
 
     inline void reset_state()
     {

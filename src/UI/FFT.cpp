@@ -3,15 +3,11 @@
 
 #include "FFT.hpp"
 
-#define _USE_MATH_DEFINES
-#include <cmath>
-#include <cstdlib>
-
 namespace UI {
 
-constexpr double _sinc(double const &x) { return sin(M_PI * x) / (M_PI * x); }
-constexpr double _lanczos_size = 3.0f;
-constexpr double _lanczos_sinc(double const &x)
+inline const /* constexpr */ double _sinc(double const &x) { return sin(M_PI * x) / (M_PI * x); }
+static const /* constexpr */ double _lanczos_size = 3.0f;
+inline const /* constexpr */ double _lanczos_sinc(double const &x)
 {
     return
         (x == 0.0)          ? 1.0 : (
@@ -29,7 +25,7 @@ std::vector<float> FFT::generate_window(FFT::IEWindowType const &type, ulong con
     {
         case FFT::IEWindowType::LANCZOS:
             for(ulong t = 0; t < size; ++t)
-                window[t] = _lanczos_sinc(static_cast<double>(2 * t) / static_cast<double>(size - 1) - 1.0);
+                window[t] = _lanczos_sinc(static_cast<double>(2 * t) / static_cast<double>(size - 1) - 1.0f);
             break;
 
         case FFT::IEWindowType::HANNING:
@@ -136,7 +132,7 @@ void FFT::calc_rects()
 
     mRects = new rectf[mBands]();
 
-    for(int i = 0; i < mBands; ++i)
+    for(ulong i = 0; i < mBands; ++i)
         mRects[i] = rectf(
                         midpt, bandw * (mBands-i-1),
                         midpt, bandw * (mBands-i)
@@ -214,7 +210,7 @@ void FFT::update(awe::AfBuffer const& buffer)
                 case FFT::IEScaleType::DBFS:
                     n( [this] (float &x) {
                             x = 20.0f * log10(x);
-                            x = (x == x) ? ( (x > -mRange) ? (x + mRange) : 0.0 ) : 0.0;
+                            x = (x == x) ? ( (x > -mRange) ? (x + mRange) : 0.0f ) : 0.0f;
                             } );
                     break;
 

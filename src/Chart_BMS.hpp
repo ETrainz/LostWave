@@ -6,7 +6,7 @@
 
 #include "Chart.hpp"
 
-class Music;
+struct Music;
 class Chart_BMS : public Chart
 {
 public:

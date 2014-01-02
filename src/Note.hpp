@@ -16,7 +16,7 @@ protected:
     float       mPan;
 
 public:
-    Note_Single(ENKey key, TTime time, uint sampleID, float vol = 1.0f, float pan = 0.0f) :
+    Note_Single(ENKey key, TTime time, unsigned sampleID, float vol = 1.0f, float pan = 0.0f) :
         Note(key, time),
         mSampleID(sampleID),
         mVol(vol),
@@ -95,7 +95,7 @@ public:
     {
         return std::pair<TTime, TTime>(mBTime, mETime);
     }
-    inline bool attach_release(TTime const &time, uint const &sampleID)
+    inline bool attach_release(TTime const &time, unsigned const &sampleID)
     {
         if (mHasEndPoint)
             return false;

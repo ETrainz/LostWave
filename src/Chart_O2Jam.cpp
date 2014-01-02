@@ -372,8 +372,8 @@ static void decrypt_arrange (uint8_t *&sData, unsigned int sSize)
 void parseM30 (clan::File& file, SampleMap& sample_map)
 {
     const int fileSize = file.get_size();
-    constexpr int headSize = sizeof(M30_File_Header);   // 32 - 4 (signature) = 28
-    constexpr int M30hSize = sizeof(M30_Sample_Header); // 52 bytes
+    static const /* constexpr */ int headSize = sizeof(M30_File_Header);   // 32 - 4 (signature) = 28
+    static const /* constexpr */ int M30hSize = sizeof(M30_Sample_Header); // 52 bytes
 
     file.seek(0);
 
@@ -464,9 +464,9 @@ void parseOMC (clan::File& file, bool isEncrypted, SampleMap& sample_map)
 {
     // read headers
     int fileSize = file.get_size();
-    constexpr int headSize = sizeof(OMC_File_Header);
-    constexpr int WAVhSize = sizeof(OMC_WAV_Header);
-    constexpr int OGGhSize = sizeof(OMC_OGG_Header);
+    static const /* constexpr */ int headSize = sizeof(OMC_File_Header);
+    static const /* constexpr */ int WAVhSize = sizeof(OMC_WAV_Header);
+    static const /* constexpr */ int OGGhSize = sizeof(OMC_OGG_Header);
 
     file.seek(0);
 

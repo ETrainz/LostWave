@@ -4,9 +4,8 @@
 #ifndef AWE_FILTER_MIXER_H
 #define AWE_FILTER_MIXER_H
 
-#include <cassert>
-#include <cstdint>
 #include "../aweFilter.h"
+#include <cassert>
 
 namespace awe {
 namespace Filter {

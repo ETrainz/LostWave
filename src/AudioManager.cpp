@@ -4,10 +4,10 @@
 #include <chrono>
 #include <list>
 
-AudioManager::AudioManager(size_t frame_count, size_t sample_rate) :
-    awe::AEngine(sample_rate, frame_count),
-    mUpdateCount(0),
-    mRunning(ATOMIC_FLAG_INIT)
+AudioManager::AudioManager(size_t frame_count, size_t sample_rate)
+    : awe::AEngine(sample_rate, frame_count)
+    , mUpdateCount(0)
+    // , mRunning(ATOMIC_FLAG_INIT)
 {
     mTrackMap.insert({
             { 0, new Track(sample_rate, frame_count, "Autoplay") },
