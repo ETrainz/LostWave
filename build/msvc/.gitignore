@@ -1,0 +1,6 @@
+*
+!.gitignore
+!*.sln
+!awe/
+!kiss_fft/
+!LostWave/

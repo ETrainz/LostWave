@@ -310,7 +310,7 @@ static void decrypt_M30XOR (uint8_t *&sData, unsigned int sSize, const uint8_t *
 
 // O2Jam's OMC-WAV XORing
 // Doesn't really XOR the data.
-static void decrypt_accXOR (uint8_t *&sData, unsigned int sSize, bool reset = false)
+static void decrypt_accXOR(std::vector<uint8_t> &sData, bool reset = false)
 {
     /**
      * The key byte is preserved throughout the whole file so it needs
@@ -322,7 +322,7 @@ static void decrypt_accXOR (uint8_t *&sData, unsigned int sSize, bool reset = fa
 
     uint8_t y , z; /* byte reserve */
 
-    for ( unsigned int i = 0; i < sSize; i++ )
+    for ( unsigned int i = 0; i < sData.size(); i++ )
     {
         z = y = sData[i];
 
@@ -345,8 +345,10 @@ static void decrypt_accXOR (uint8_t *&sData, unsigned int sSize, bool reset = fa
 }
 
 // O2Jam's OMC-WAV data shuffler
-static void decrypt_arrange (uint8_t *&sData, unsigned int sSize)
+static void decrypt_arrange (std::vector<uint8_t> &sData)
 {
+    unsigned int sSize = sData.size();
+
     // rearrangement key
     unsigned int  k = ((sSize % 17) << 4) + (sSize % 17);
 
@@ -354,18 +356,16 @@ static void decrypt_arrange (uint8_t *&sData, unsigned int sSize)
     unsigned int bs = sSize / 17;
 
     // temporary buffer
-    uint8_t* sRawData = new uint8_t[sSize];
-    std::copy (sData, sData + sSize, sRawData);
+    std::vector<uint8_t> sRawData(sData.begin(), sData.end());
+
     for ( unsigned int b = 0; b < 17; b++ )
     {
         unsigned int se_bOffset = bs * b;                 // offset of encoded block
         unsigned int ed_bOffset = bs * c_Arrangement[k];  // offset of decoded block
 
-        std::copy (sRawData + se_bOffset, sRawData + se_bOffset + bs, sData + ed_bOffset);
+        std::copy (sRawData.begin() + se_bOffset, sRawData.begin() + se_bOffset + bs, sData.begin() + ed_bOffset);
         k++;
     }
-
-    delete[] sRawData;
 }
 
 // type M30 parser
@@ -550,19 +550,19 @@ void parseOMC (clan::File& file, bool isEncrypted, SampleMap& sample_map)
             if (SampleSize > 0 || numChannels > 0)
             {
                 // rip PCM data
-                uint8_t* pSmplData = pPtr;
+                std::vector<uint8_t> pSmplData(pPtr, pPtr + SampleSize);
                 pPtr += SampleSize, i += SampleSize;
 
                 // decrypt data
                 if (isEncrypted) {
-                    decrypt_arrange(pSmplData, SampleSize);
-                    decrypt_accXOR (pSmplData, SampleSize);
+                    decrypt_arrange(pSmplData);
+                    decrypt_accXOR (pSmplData);
                 }
 
                 // create WAVE file buffer
-                uint8_t* poSmplData = new uint8_t[SampleSize+44];
+                std::vector<uint8_t> poSmplData(SampleSize + 44);
 
-                WAV_Header* pWAVOutHead = (WAV_Header*)poSmplData;
+                WAV_Header* pWAVOutHead = (WAV_Header*)poSmplData.data();
 
                 pWAVOutHead->RIFF_ID   = 0x46464952; // "RIFF"
                 pWAVOutHead->RIFF_Size = SampleSize + 36;
@@ -581,16 +581,14 @@ void parseOMC (clan::File& file, bool isEncrypted, SampleMap& sample_map)
                 pWAVOutHead->data_ChunkSize = SampleSize;
 
                 // arrayCopy (pSmplData, 0, poSmplData, 44, SampleSize);
-                std::copy (pSmplData, pSmplData + SampleSize, poSmplData + 44);
+                std::copy (pSmplData.begin(), pSmplData.begin() + SampleSize, poSmplData.begin() + 44);
                 // pass into WAVE stream
-                Sample* pSample = new Sample((char*)pSmplData, SampleSize, SampleName.c_str());
+                Sample* pSample = new Sample((char*)pSmplData.data(), SampleSize, SampleName.c_str());
 
                 if (pSample->getSource() == nullptr)
                     fprintf(stderr, "[warn] Failed to load OMC WAV sample: %s\n", SampleName.c_str());
                 else
                     sample_map[smplID] = pSample;
-
-                delete[] poSmplData;
             }
         }
 
@@ -599,8 +597,7 @@ void parseOMC (clan::File& file, bool isEncrypted, SampleMap& sample_map)
     }
 
     /* reset accXOR */
-    static uint8_t* null = 0;
-    decrypt_accXOR(null, 0, true);
+    decrypt_accXOR(std::vector<uint8_t>(0), true);
 
     if (OGG_PackSize > 0)
     {
