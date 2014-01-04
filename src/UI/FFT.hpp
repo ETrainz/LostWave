@@ -36,33 +36,33 @@ public:
 private:
     std::mutex      mMutex;     //! Master mutex
 
-    recti           mArea;      //! display area
-    ulong           mFrames;    //! number of frames to process
-    ulong           mBands;     //! number of bands to show
-    float           mFade;      //! decay strength
+protected:
+    ////    Class behaviour    /////////////////////////////
+    ulong   mFrames;    //! number of frames to process
+    ulong   mBands;     //! number of bands to show
+    float   mFade;      //! decay strength
+    float   mDecay;     //! decay over time
 
     IEWindowType    mWindowType;
     IEScaleType     mScaleType;
 
+    float   mScale; // range of values to display (for log scale from 0db to x)
+    float   mRange; // number of pixels
+
+    
+    ////    Class state    /////////////////////////////////
     kiss_fftr_cfg    kCl,  kCr; // KISSFFT config
     kiss_fft_scalar *kIl, *kIr; // input
     kiss_fft_cpx    *kOl, *kOr; // output
 
-protected:
-    std::vector<float>  mWindow;    // FFT window function coefficients
-    awe::AfBuffer       mOutput;
-    awe::AfBuffer       mSpectrum;  // output spectrum to be drawn
-
-    float           mDecayPeriod;   // decay over time
-    float           mScale;         // range of values to display (for log scale from 0db to x)
-    float           mRange;         // number of pixels
-    float           mMultiplier;    // the bands peak at around -5 dBFS, 
-
-    float*          mBandX;         // linear to logarithmic table
-    rectf*          mRects;
-
-    void set_bands(ulong);
-    void calc_rects();
+    std::vector<float>  mBandX;         // Plot scale conversion table
+    std::vector<float>  mWindow;        // FFT window function coefficients
+    float               mWindowScale;   // FFT window magnitude adjustment
+    awe::AfBuffer       mOutput;        // Squares of the real and imaginary parts of the FFT output
+    awe::AfBuffer       mSpectrum;      // Output spectrum values adjusted to scale for drawing
+    
+    void setBands (ulong);
+    void setWindow(IEWindowType);
 
 public:
     FFT(clan::GUIComponent *parent,

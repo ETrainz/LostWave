@@ -2,6 +2,13 @@
 //  Copyright 2013 Keigen Shu
 
 #include "__zzCore.hpp"
+
+#ifdef __USE_D3D
+#include <ClanLib/d3d.h>
+#else
+#include <ClanLib/gl.h>
+#endif
+
 #include "Main.hpp"
 #include "JSON.hpp"
 #include "Game.hpp"
@@ -68,8 +75,13 @@ int App::main(std::vector<std::string> const &args)
 {
     clan::SetupCore     _SetupCore;
     clan::SetupDisplay  _SetupDisplay;
-    clan::SetupGL       _SetupGLRender;
     clan::SetupGUI      _SetupGUI;
+
+#ifdef __USE_D3D
+    clan::SetupD3D      _SetupD3DRender;
+#else
+    clan::SetupGL       _SetupGLRender;
+#endif
 
     try {
         JSONFile config("config.json");

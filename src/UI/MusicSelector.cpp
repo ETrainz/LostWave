@@ -98,7 +98,14 @@ Chart* MusicSelector::get() const
     for(int i=0; i<mVptr; ip++, i++);
 
     ChartMap::const_iterator ic = (*ip)->charts.begin(); // Selected chart
-    for(int i=0; i<mCindex && ic!=(*ip)->charts.end(); ic++, i++);
+    for (int i = 0; i<mCindex; ic++, i++)
+    {
+        if (ic == (*ip)->charts.end())
+        {
+            ic--;
+            break;
+        }
+    }
 
     return ic->second;
 }
@@ -237,8 +244,15 @@ void MusicSelector::render(clan::Canvas& canvas, const recti& clip_rect)
             {
                 ChartMap::const_iterator ic = (*ip)->charts.begin();
 
-                for(int i = 0; ic != (*ip)->charts.end() && i <= mCindex; i++, ic++)
-                    chart = ic->second; // Grab chart
+                for(int i = 0; i < mCindex; i++, ic++)
+                {
+                    if (ic == (*ip)->charts.end())
+                    {
+                        ic--;
+                        break;
+                    }
+                }
+                chart = ic->second; // Grab chart
             }
 
             mSbf.draw_text(canvas, mSgo, (*ip)->genre);

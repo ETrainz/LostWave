@@ -13,7 +13,6 @@ typedef unsigned long   ulong;
 #include <ClanLib/core.h>
 #include <ClanLib/display.h>
 #include <ClanLib/gui.h>
-#include <ClanLib/gl.h>
 
 typedef clan::Quad      quadi;
 typedef clan::Rect      recti;
@@ -286,5 +285,15 @@ inline clan::Rectx<T> product (const clan::Rectx<T> &area, const clan::Sizex<T> 
 
     return clan::Rectx<T>(l,u,r,d);
 }
+
+
+////    CONFIGURATION DEFINITIONS    ///////////////////////
+
+////    Use Direct3D instead of the default OpenGL on Windows?
+#define USE_D3D_ON_WINDOWS
+
+#if defined(USE_D3D_ON_WINDOWS) && ( defined(_WIN32) || defined(_WIN64) )
+#define __USE_D3D
+#endif
 
 #endif

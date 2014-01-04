@@ -41,14 +41,16 @@ inline const /* constexpr */ Aint to_Aint(const Afloat &v)
     if (v != v) // Abnormal floating point
         return 0;
     else if (v < 0)
-        return std::max<int32_t>(static_cast<int32_t>(v * 32768.0f), -32768);
+        return std::max<Aint>(static_cast<int32_t>(v * 32768.0f), -32768);
     else
-        return std::min<int32_t>(static_cast<int32_t>(v * 32767.0f),  32767);
+        return std::min<Aint>(static_cast<int32_t>(v * 32767.0f),  32767);
 }
+
+static const /* constexpr */ Afloat Afloat_limit = 1.0f / 65535.0f;
 
 /** Normalized linear magnitude (0.0f - 1.0f) to full-scale decibel */
 inline const /* constexpr */ Afloat to_dBFS(const Afloat &v) { return 20.0f * log10(v); }
-static const /* constexpr */ Afloat dBFS_limit = to_dBFS(1.0f / 65535.0f);
+static const /* constexpr */ Afloat dBFS_limit = to_dBFS(Afloat_limit);
 
 
 /**
