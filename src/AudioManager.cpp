@@ -59,23 +59,48 @@ AudioManager::~AudioManager()
 
 void AudioManager::wipe_SampleMap(bool drop_data)
 {
-    while(!mSampleMap.empty())
-    {
-        SampleMap::iterator it = mSampleMap.begin();
-        Sample* smp = it->second;
-        mSampleMap.erase(it);
-        if (drop_data) {
-            smp->drop();
-            delete  smp;
-        }
-    }
+    std::lock_guard<std::mutex> lock(mMutex);
+
+    // Swap maps
+    VoiceMap * pVoiceMap  = new VoiceMap ();
+    SampleMap* pSampleMap = new SampleMap();
+
+    pVoiceMap ->swap(mVoiceMap );
+    pSampleMap->swap(mSampleMap);
+
+    // Create garbage collector thread
+    std::thread gc(
+        [] (VoiceMap* vm, SampleMap* sm, bool drop)
+        {
+            while (vm->empty() == false)
+                vm->erase(vm->begin());
+
+            while (sm->empty() == false)
+            {
+                SampleMap::iterator it = sm->begin();
+                Sample* smp = it->second;
+                sm->erase(it);
+                if (drop) {
+                    smp->drop();
+                    delete smp;
+                }
+            }
+
+            delete vm;
+            delete sm;
+        },
+            pVoiceMap, pSampleMap, drop_data
+    );
+    gc.detach();
 }
 
 void AudioManager::swap_SampleMap(SampleMap& new_map)
 {
-    mSampleMap.swap(new_map);
-    for(auto node : mSampleMap)
+    for (auto node : new_map)
         node.second->stop(); // Reset loop position to beginning
+
+    std::lock_guard<std::mutex> lock(mMutex);
+    mSampleMap.swap(new_map);
 }
 
 bool AudioManager::play(ulong sample, uchar track, float vol, float pan, bool loop)

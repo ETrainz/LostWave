@@ -181,6 +181,7 @@ int App::main(std::vector<std::string> const &args)
 
                 chart->load_art();
                 chart->load_samples();
+                game->am.wipe_SampleMap(true);
                 game->am.swap_SampleMap(chart->getSampleMap());
                 chart->load_chart();
                 chart->sort_sequence();
@@ -208,6 +209,7 @@ int App::main(std::vector<std::string> const &args)
 
                 chart->load_art();
                 chart->load_samples();
+                game->am.wipe_SampleMap(true);
                 game->am.swap_SampleMap(chart->getSampleMap());
                 chart->load_chart();
                 chart->sort_sequence();
