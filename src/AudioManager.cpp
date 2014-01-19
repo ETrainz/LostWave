@@ -1,6 +1,4 @@
 #include "AudioManager.hpp"
-#include "libawe/Filters/3BEQ.h"
-#include "libawe/Filters/Mixer.h"
 #include <chrono>
 #include <list>
 
@@ -14,15 +12,6 @@ AudioManager::AudioManager(size_t frame_count, size_t sample_rate)
             { 1, new Track(sample_rate, frame_count, "Player 1") },
             { 2, new Track(sample_rate, frame_count, "Player 2") }
             });
-    /*
-    mTrackMap[0]->getRack().attach_filter(new awe::Filter::AscMixer(1.0, 0.0));
-    mTrackMap[1]->getRack().attach_filter(new awe::Filter::AscMixer(1.0, 0.0));
-    mTrackMap[2]->getRack().attach_filter(new awe::Filter::AscMixer(1.0, 0.0));
-
-    mTrackMap[0]->getRack().attach_filter(new awe::Filter::Asc3BEQ(sample_rate / 2, 880.0, 5000.0, 1.0, 0.7, 0.8));
-    mTrackMap[1]->getRack().attach_filter(new awe::Filter::Asc3BEQ(sample_rate / 2, 880.0, 5000.0, 1.0, 0.7, 0.8));
-    mTrackMap[2]->getRack().attach_filter(new awe::Filter::Asc3BEQ(sample_rate / 2, 880.0, 5000.0, 1.0, 0.7, 0.8));
-    */
 
     mMasterTrack.attach_source(mTrackMap[0]);
     mMasterTrack.attach_source(mTrackMap[1]);

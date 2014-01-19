@@ -597,7 +597,10 @@ void parseOMC (clan::File& file, bool isEncrypted, SampleMap& sample_map)
     }
 
     /* reset accXOR */
-    decrypt_accXOR(std::vector<uint8_t>(0), true);
+    {
+        std::vector<uint8_t> zero(0);
+        decrypt_accXOR(zero, true);
+    }
 
     if (OGG_PackSize > 0)
     {

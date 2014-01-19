@@ -88,7 +88,7 @@ void Asample::render(AfBuffer &buffer, const ArenderConfig &config)
         }
     } else { // config.quality == BEST || DEFAULT
 #if 0
-        if (move_rate > 1.0) // Up-sampling
+        if (move_rate > 1.0) // Down-sampling
         {
 #endif
             /****/ if (mSource->getChannelCount() >= 2)
@@ -110,7 +110,7 @@ void Asample::render(AfBuffer &buffer, const ArenderConfig &config)
                 }
             }
 #if 0
-        } else { // Down-sampling
+        } else { // Up-sampling
 
         }
 #endif

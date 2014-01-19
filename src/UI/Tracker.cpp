@@ -304,7 +304,6 @@ bool Tracker::process_input(const clan::InputEvent& event)
 {
     /****/ if (event.device.get_type() == clan::InputDevice::Type::keyboard)
     {
-        // dump_event(event, "Tracker");
         /****/ if (event.type == clan::InputEvent::Type::pressed)
         {
             switch (event.id)
@@ -323,6 +322,8 @@ bool Tracker::process_input(const clan::InputEvent& event)
     } else if (event.device.get_type() == clan::InputDevice::Type::pointer) {
 
     }
+
+    if (debug) dump_event(event, "Tracker");
 
     return false;
 }

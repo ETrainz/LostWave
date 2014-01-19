@@ -26,7 +26,28 @@ void Note_Single::render(UI::Tracker const &tracker, clan::Canvas &canvas) const
     p.top    = canvas.get_height() - p.top;
     p.bottom = canvas.get_height() - p.bottom;
 
-    canvas.fill_rect(p, clan::Colorf::white);
+    clan::Colorf color;
+
+    switch (getKey())
+    {
+        case ENKey::NOTE_P1_1:
+        case ENKey::NOTE_P1_3:
+        case ENKey::NOTE_P1_5:
+        case ENKey::NOTE_P1_7:
+            color = clan::Colorf::white;
+            break;
+        case ENKey::NOTE_P1_2:
+        case ENKey::NOTE_P1_6:
+            color = clan::Colorf::cyan;
+            break;
+        case ENKey::NOTE_P1_4:
+            color = clan::Colorf::gold;
+            break;
+        default:
+            color = clan::Colorf::white;
+    }
+
+    canvas.fill_rect(p, color);
 }
 
 void Note_Single::update(UI::Tracker const &tracker, const KeyStatus &stat)
@@ -93,6 +114,27 @@ void Note_Long::render(UI::Tracker const &tracker, clan::Canvas &canvas) const
     pe.top    = canvas.get_height() - pe.top;
     pe.bottom = canvas.get_height() - pe.bottom;
 
+    clan::Colorf color;
+
+    switch (getKey())
+    {
+        case ENKey::NOTE_P1_1:
+        case ENKey::NOTE_P1_3:
+        case ENKey::NOTE_P1_5:
+        case ENKey::NOTE_P1_7:
+            color = clan::Colorf::white;
+            break;
+        case ENKey::NOTE_P1_2:
+        case ENKey::NOTE_P1_6:
+            color = clan::Colorf::cyan;
+            break;
+        case ENKey::NOTE_P1_4:
+            color = clan::Colorf::gold;
+            break;
+        default:
+            color = clan::Colorf::white;
+    }
+
     clan::Colorf body, head;
 
     if (mBScore.rank == EJRank::AUTO) {
@@ -103,7 +145,7 @@ void Note_Long::render(UI::Tracker const &tracker, clan::Canvas &canvas) const
         body.a = 0.4f;
         head.a = 0.8f;
     } else if (mBScore.rank == EJRank::NONE) {
-        body = head = clan::Colorf::white;
+        body = head = color;
         body.a = 0.8f;
     } else if (mEScore.rank == EJRank::NONE) {
         body = head = clan::Colorf::green;

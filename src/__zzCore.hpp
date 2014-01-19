@@ -39,6 +39,8 @@ typedef clan::Pointd    point2d;
 
 /*  -- ClanLib HELPERS --  */
 ////////////////////////////////////////////////////////////
+static bool debug = false;
+
 inline void dump_event(clan::InputEvent const &event, std::string const &from = "core")
 {
     clan::InputEvent::Type const &et = event.type;

@@ -195,7 +195,7 @@ void MusicSelector::render(clan::Canvas& canvas, const recti& clip_rect)
         mBGImg = clan::Image();
     } else if (ip != il) {
         if (il != mMusicList.cend())
-        (*il)->charts.begin()->second->setCoverArt();
+            (*il)->charts.begin()->second->setCoverArt();
         (*ip)->charts.begin()->second->load_art();
 
         mVprv = mVptr;
@@ -240,31 +240,21 @@ void MusicSelector::render(clan::Canvas& canvas, const recti& clip_rect)
             pos += mAeo;
 
             // Draw information about selected music/chart
-            Chart* chart;
-            {
-                ChartMap::const_iterator ic = (*ip)->charts.begin();
-
-                for(int i = 0; i < mCindex; i++, ic++)
-                {
-                    if (ic == (*ip)->charts.end())
-                    {
-                        ic--;
-                        break;
-                    }
-                }
-                chart = ic->second; // Grab chart
-            }
+            Chart* chart = this->get();
 
             mSbf.draw_text(canvas, mSgo, (*ip)->genre);
             mSbf.draw_text(canvas, mSao, (*ip)->artist);
             mShf.draw_text(canvas, mSto, (*ip)->title);
-            mSbf.draw_text(canvas, mSno,
-                    clan::string_format("Charted by %1", chart->getCharter())
-                    );
-            mSbf.draw_text(canvas, mSdo,
-                    clan::string_format("Level %1", chart->getLevel())
-                    );
-            {
+
+            if (chart != nullptr)
+            { // TODO guarantee chart is not nullptr
+                mSbf.draw_text(canvas, mSno,
+                        clan::string_format("Charted by %1", chart->getCharter())
+                        );
+                mSbf.draw_text(canvas, mSdo,
+                        clan::string_format("Level %1", chart->getLevel())
+                        );
+
                 float const tempo = chart->getTempo();
                 clan::StringFormat f("%1.%2 BPM");
                 f.set_arg(1, static_cast<int>( tempo ));
@@ -272,7 +262,6 @@ void MusicSelector::render(clan::Canvas& canvas, const recti& clip_rect)
 
                 mSbf.draw_text(canvas, mSbo, f.get_result());
             }
-
         } else {
             mIaf.draw_text(canvas, pos + mIao, (*it)->artist);
             mItf.draw_text(canvas, pos + mIto, (*it)->title);
