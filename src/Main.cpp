@@ -16,6 +16,7 @@
 #include "UI/MusicSelector.hpp"
 #include "UI/FFT.hpp"
 #include "UI/Tracker.hpp"
+#include "AudioTrack.hpp"
 #include "MusicScanner.hpp"
 #include "Chart_O2Jam.hpp"
 #include "Chart_BMS.hpp"
@@ -85,6 +86,10 @@ int App::main(std::vector<std::string> const &args)
 
     try {
         JSONFile config("config.json");
+        debug = config.get_if_else_set(
+                &JSONReader::getBoolean, "debug", false,
+                [](bool const &value) -> bool {}
+                );
 
         sizei resolution = config.get_if_else_set(
             &JSONReader::getVec2i, "video.resolution", vec2i(640, 480),
@@ -134,6 +139,11 @@ int App::main(std::vector<std::string> const &args)
             FFTp1->set_constant_repaint(true);
             FFTp2->set_constant_repaint(true);
 
+            AudioTrack* ATPM = new AudioTrack(&game->am.getMasterTrack()   , game, point2i{ 200,0 });
+            AudioTrack* ATP0 = new AudioTrack(game->am.getTrackMap()->at(0), game, point2i{ 250,0 });
+            AudioTrack* ATP1 = new AudioTrack(game->am.getTrackMap()->at(1), game, point2i{ 300,0 });
+            AudioTrack* ATP2 = new AudioTrack(game->am.getTrackMap()->at(2), game, point2i{ 350,0 });
+
             std::thread* av_thread = new std::thread(autoVisualize, &game->am, FFTbg, FFTp1, FFTp2);
             game->am.attach_thread(av_thread);
         }
@@ -166,6 +176,8 @@ int App::main(std::vector<std::string> const &args)
         Music* music;
         Chart* chart;
 
+        recti chart_area(0, 0, 200, game->get_height());
+
         if (args.size() > 1)
         {
             // TODO read other parameters
@@ -188,7 +200,7 @@ int App::main(std::vector<std::string> const &args)
 
                 {
                     UI::Tracker tracker(
-                        game, game->get_geometry(), JHard, chart,
+                        game, chart_area, JHard, chart,
                         key_inputs, autoplay ? keys : KeyList()
                     );
                     tracker.start();
@@ -216,7 +228,7 @@ int App::main(std::vector<std::string> const &args)
 
                 {
                     UI::Tracker tracker(
-                        game, game->get_geometry(), JHard, chart,
+                        game, chart_area, JHard, chart,
                         key_inputs, autoplay ? keys : KeyList()
                     );
                     tracker.start();

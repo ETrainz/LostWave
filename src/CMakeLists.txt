@@ -3,7 +3,7 @@ find_package(ClanLib REQUIRED)
 add_definitions("-std=c++11 -ggdb")
 
 add_executable(LostWave
-	AudioManager.cpp InputManager.cpp
+	AudioManager.cpp AudioTrack.cpp InputManager.cpp
 	Chart.cpp Chart_BMS.cpp Chart_O2Jam.cpp Music.cpp MusicScanner.cpp
 	Chrono.cpp JSON.cpp Measure.cpp Note.cpp
 	UI/FFT.cpp

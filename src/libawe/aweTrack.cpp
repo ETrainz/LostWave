@@ -25,14 +25,7 @@ void Atrack::fflip()
 
 void Atrack::ffilter()
 {
-    AfBuffer::iterator b = mObuffer.begin();
-    AfBuffer::iterator e = mObuffer.end();
-
-    while(b != e)
-    {
-        mOfilter.doL(*b); ++b;
-        mOfilter.doR(*b); ++b;
-    }
+    mOfilter.doBuffer(mObuffer);
 }
 
 

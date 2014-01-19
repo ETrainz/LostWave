@@ -51,7 +51,7 @@ static const /* constexpr */ Afloat Afloat_limit = 1.0f / 65535.0f;
 /** Normalized linear magnitude (0.0f - 1.0f) to full-scale decibel */
 inline const /* constexpr */ Afloat to_dBFS(const Afloat &v) { return 20.0f * log10(v); }
 static const /* constexpr */ Afloat dBFS_limit = to_dBFS(Afloat_limit);
-
+static const /* constexpr */ Afloat Afloat_96dB = 1.0 / pow(10.0, 4.8);
 
 /**
  * A frame is a snapshot of all sound samples to and/or from all channels at

@@ -23,5 +23,7 @@
             "map-9K": "asdf jkl;",
             "speedx": 4.0
         }
-    }
+    },
+    "debug": true
+
 }
