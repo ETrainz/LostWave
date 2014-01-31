@@ -1,4 +1,4 @@
-//  AudioTrack.hpp :: Game audio track with visual bindings
+//  AudioTrack.hpp :: Game audio track with UI bindings
 //  Copyright 2014 Keigen Shu
 
 #ifndef AUDIO_TRACK_H
@@ -16,7 +16,7 @@
 class AudioTrack : public clan::GUIComponent
 {
 private:
-    awe::Atrack *mTrack;
+    awe::Atrack                 *mTrack;
 
     awe::Filter::Asc3BEQ        *m3BEQ;
     awe::Filter::AscMixer       *mMixer;
@@ -34,7 +34,8 @@ private:
     clan::Slider                mGCsdhPan;
     /*
     clan::Button                mGCbtnMute;
-*/
+    clan::Button                mGCbtnToggleSize;
+    */
 
 public:
     AudioTrack(
@@ -44,18 +45,6 @@ public:
     );
 
     ~AudioTrack();
-
-    //  This GUI component has a fixed layout
-    static const sizei kSize;
-    static const int   kPadding;
-
-    static const sizei kPanBarSize;
-
-    static const sizei kMeterBarSize;
-    static const int   kMarkerWidth;
-    static const sizei kFaderSize;
-    static const sizei kEQGainSize;
-    static const sizei kEQFreqSize;
 
     ////    GUI Component Methods    //////////////////////////////////
     void render(clan::Canvas &canvas, const recti &clip_rect);

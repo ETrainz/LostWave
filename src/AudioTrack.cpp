@@ -1,32 +1,43 @@
 #include "AudioTrack.hpp"
 
-const int thumb_height = 6; // Refer to theme CSS
+////    GUI consts    /////////////////////////////////////////////////
+constexpr int   kPadding    = 4     , kmPadding     = 2;
+constexpr int   kWidth      = 40    , kmWidth       = 8;
 
-const int   AudioTrack::kPadding         = 4;
+constexpr int   kSliderWidth    = 2 * kPadding + 1;
 
-const sizei AudioTrack::kEQGainSize      = {
-    static_cast<int>(static_cast<float>(40 - 3 * kPadding) / 3.0f),
-    41
+
+const sizei kEQGainSize = {
+    static_cast<int>(static_cast<float>(kWidth - 3 * kPadding) / 3.0f),
+    kWidth + 1
 };
 
-const sizei AudioTrack::kEQFreqSize        = {
-    static_cast<int>(static_cast<float>(40 - 2 * kPadding) / 2.0f),
-    9
+const sizei kEQFreqSize = {
+    static_cast<int>(static_cast<float>(kWidth - 2 * kPadding) / 2.0f),
+    kSliderWidth
 };
 
-const sizei AudioTrack::kPanBarSize      = { 40 - kPadding * 2, 9 };
-const sizei AudioTrack::kMeterBarSize    = { kPadding, 120 };
-const int   AudioTrack::kMarkerWidth     = 5;
-const sizei AudioTrack::kFaderSize       = { 12, 120 };
+const sizei kPanSize        = { kWidth - 2 * kPadding, kSliderWidth };
+const sizei kMeterSize      = { kPadding - 1 , 120 };   // Single meter
 
-const sizei AudioTrack::kSize            = { 40, kEQGainSize.height + kEQFreqSize.height + kPanBarSize.height + kMeterBarSize.height + 9 * kPadding };
+constexpr int   kMarkerWidth    = kPadding;
+const sizei kFaderSize      = {(kWidth - 3 * kPadding) / 3, 120 };
 
-const point2i koEQGainBars  = { AudioTrack::kPadding, AudioTrack::kPadding };
-const point2i koEQFreqBars  = { AudioTrack::kPadding, koEQGainBars.y + AudioTrack::kEQGainSize.height + AudioTrack::kPadding };
-const int     kySplit       = koEQFreqBars.y + AudioTrack::kEQFreqSize.height + AudioTrack::kPadding * 2;
-const point2i koPanBars     = { AudioTrack::kPadding, AudioTrack::kPadding + kySplit };
-const point2i koMeterBars   = { AudioTrack::kPadding, koPanBars.y + AudioTrack::kPanBarSize.height + AudioTrack::kPadding };
+const sizei kSize           = {
+    kWidth,
+    kEQGainSize.height + kEQFreqSize.height + kPanSize.height + kMeterSize.height + 9 * kPadding
+};
 
+const point2i   koEQGain    = { kPadding, kPadding };
+const point2i   koEQFreq    = { kPadding, koEQGain.y + kEQGainSize.height + kPadding };
+const int       kySplit     = koEQFreq.y + kEQFreqSize.height + kPadding * 2;
+const point2i   koPan       = { kPadding, kPadding + kySplit };
+const point2i   koMeter     = { kPadding, koPan.y + kPanSize.height + kPadding };
+
+const sizei     kmMeterSize     = { kmPadding, 120 };   // Single meter on mini mode
+
+
+////    AudioTrack class    ///////////////////////////////////////////
 AudioTrack::AudioTrack(
     awe::Atrack        *source,
     clan::GUIComponent *parent,
@@ -60,15 +71,15 @@ AudioTrack::AudioTrack(
     mTrack->getRack().attach_filter(mMeter);
 
     ////    EQ GAIN    ////
-    mGCsdvEQGainL.set_geometry({ koEQGainBars, kEQGainSize });
+    mGCsdvEQGainL.set_geometry({ koEQGain, kEQGainSize });
     mGCsdvEQGainM.set_geometry({
-            koEQGainBars.x +     kEQGainSize.width + kPadding / 2,
-            koEQGainBars.y,
+            koEQGain.x +     kEQGainSize.width + kPadding / 2,
+            koEQGain.y,
             kEQGainSize
             });
     mGCsdvEQGainH.set_geometry({
-            koEQGainBars.x + 2 * kEQGainSize.width + kPadding,
-            koEQGainBars.y,
+            koEQGain.x + 2 * kEQGainSize.width + kPadding,
+            koEQGain.y,
             kEQGainSize
             });
 
@@ -89,11 +100,10 @@ AudioTrack::AudioTrack(
     mGCsdvEQGainH.func_value_changed().set(this, &AudioTrack::eq_gain_changed);
 
     ////    EQ FREQ    ////
-
-    mGCsdhEQFreqL.set_geometry({ koEQFreqBars, kEQFreqSize });
+    mGCsdhEQFreqL.set_geometry({ koEQFreq, kEQFreqSize });
     mGCsdhEQFreqH.set_geometry({
-            koEQFreqBars.x + kEQFreqSize.width,
-            koEQFreqBars.y,
+            koEQFreq.x + kEQFreqSize.width,
+            koEQFreq.y,
             kEQFreqSize
             });
 
@@ -110,7 +120,7 @@ AudioTrack::AudioTrack(
     mGCsdhEQFreqH.set_position(12);
 
     ////    PAN    ////
-    mGCsdhPan.set_geometry({ koPanBars, kPanBarSize });
+    mGCsdhPan.set_geometry({ koPan, kPanSize });
     mGCsdhPan.set_horizontal(true);
     mGCsdhPan.set_ranges(-10, 10, 2, 5);
     mGCsdhPan.set_position(0);
@@ -118,11 +128,11 @@ AudioTrack::AudioTrack(
     mGCsdhPan.func_value_changed().set(this, &AudioTrack::mixer_value_changed);
 
     ////    FADER    ////
-    int range = kFaderSize.height - thumb_height;
+    int range = kFaderSize.height - 6; // Thumb height == 6
 
     mGCsdvGain.set_geometry({
             get_width() - kPadding - kFaderSize.width,
-            koMeterBars.y + kPadding,
+            koMeter.y + kPadding,
             kFaderSize
             });
     mGCsdvGain.set_vertical(true);
@@ -145,6 +155,7 @@ AudioTrack::~AudioTrack() {
     delete mMixer;
     delete m3BEQ;
 }
+
 ////    GUI Component Methods    //////////////////////////////////
 void AudioTrack::render(clan::Canvas &canvas, const recti &clip_rect)
 {
@@ -195,20 +206,20 @@ void AudioTrack::render(clan::Canvas &canvas, const recti &clip_rect)
     //  Meter Background
     canvas.fill_rect(
             recti(
-                kPadding, koMeterBars.y,
+                kPadding, koMeter.y,
                 sizei(
-                    2 * kPadding + 2 * kMeterBarSize.width + 1,
-                    2 * kPadding + kMeterBarSize.height
+                    2 * kPadding + 2 * kMeterSize.width + 1,
+                    2 * kPadding + kMeterSize.height
                 )),
             clan::Colorf::black
             );
 
     //  Meter Bars
     {
-        const int oT = kPadding + koMeterBars.y;
+        const int oT = kPadding + koMeter.y;
 
-        const int w = kMeterBarSize.width;
-        const int oL = koMeterBars.x + kPadding;
+        const int w = kMeterSize.width;
+        const int oL = koMeter.x + kPadding;
         const int oR = oL + w + 1;
 
         auto get_color = [] (awe::Aint const &x) -> clan::Colorf {
@@ -247,8 +258,8 @@ void AudioTrack::render(clan::Canvas &canvas, const recti &clip_rect)
     //  Markers for Meter bar and Fader
     {
         // draw dB lines, y + 1 because of dBFS round up
-        int o = 4 * kPadding + 2 * kMeterBarSize.width + 1;
-        int t = koMeterBars.y + kPadding;
+        int o = 4 * kPadding + 2 * kMeterSize.width + 1;
+        int t = koMeter.y + kPadding;
 
         for(int i = 1; i < get_height(); i += 16)
             canvas.draw_line(
