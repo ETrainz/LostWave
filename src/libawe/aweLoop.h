@@ -15,26 +15,28 @@ namespace awe {
 class Aloop
 {
 public:
-    /** Aloop mode enumerator and operators */
+    /**
+     * Loop operation mode enumerator
+     */
     enum class Mode : std::uint8_t {
         // First two bits is the loop method
         UNDEFINED   = 0x0,
 
-        ONCE        = 0x1,
-        REPEAT      = 0x2,
-        ALTERNATING = 0x3,
+        ONCE        = 0x1,  //! Traverse slice from beginning to end only once
+        REPEAT      = 0x2,  //! Traverse slice from beginning to end and repeat forever
+        ALTERNATING = 0x3,  //! Traverse slice from beginning to end then back and repeat forever
 
-        // Third bit is reserved
+        // Third bit is unused/reserved
         // Forth bit is move direction
-        FORWARD     = 0x0,
-        REVERSE     = 0x8,
+        FORWARD     = 0x0,  //! Traverse in normal direction (begin to end)
+        REVERSE     = 0x8,  //! Traverse in reverse direction (end to begin)
 
         // Default
-        __DEFAULT   = FORWARD | ONCE,
+        __DEFAULT   = FORWARD | ONCE,   //! Default mode setting
 
         // Masks
-        __LOOP_MODE = 0x3,
-        __DIRECTION = 0x8,
+        __LOOP_MODE = 0x3,  //! Loop mode bit mask
+        __DIRECTION = 0x8,  //! Loop direction bit mask
     };
 
     Mode   mode;
@@ -44,20 +46,36 @@ public:
     Aloop(const double &_begin, const double &_end, const Aloop::Mode &_mode, const bool startPaused = false);
     Aloop(const double &_begin, const double &_end, const double &_now, const Aloop::Mode &_mode, const bool startPaused = false);
 
-    /* Move current position by 'b' */
+    /**
+     * Move current position by 'b'.
+     * @return true if the loop is/has been paused.
+     */
     bool operator+= (const double &b);
+
+    /**
+     * Move current position by '-b'.
+     * @return true if the loop is/has been paused.
+     */
     inline bool operator-= (const double &b) { return operator+=(-b); }
 
-    /* cast to unsigned integer */
+    /** @return Position of the beginning of the loop. */
     inline unsigned long ubegin () const { return std::floor(begin); }
+
+    /** @return Position of the end of the loop. */
     inline unsigned long uend   () const { return std::floor(end); }
+
+    /** @return Current position of the loop traversal. */
     inline unsigned long unow   () const {
-        // DO NOT TOUCH :: THIS MESS FIXES ANNOYING PULSES AT END OF SOUND RENDER
+        //# :: DO NOT TOUCH ::
+        //# THIS MESS FIXES ANNOYING PULSES AT END OF SOUND RENDER
         return std::min<unsigned long>(now, uend() - 1);
     }
 
-    inline double getPosition() const { return now / end; }
-    inline double getProgress() const { return now / (end - begin); }
+    /** @return Current position relative to end of loop. */
+    inline double getPosition() const { return  now / end; }
+
+    /** @return Current position relative to traversal range of loop. */
+    inline double getProgress() const { return (now - begin) / (end - begin); }
 };
 
 inline static std::uint8_t operator* (const Aloop::Mode&  mode) { return static_cast<std::uint8_t>(mode); }

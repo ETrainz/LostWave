@@ -54,6 +54,8 @@ static const /* constexpr */ Afloat dBFS_limit = to_dBFS(Afloat_limit);
 static const /* constexpr */ Afloat Afloat_96dB = 1.0 / pow(10.0, 4.8);
 
 /**
+ * A single audio frame.
+ *
  * A frame is a snapshot of all sound samples to and/or from all channels at
  * a specific time point. This structure is an expansion of the STL array to
  * support array/frame-wide algorithms and arithmetic.
@@ -207,6 +209,10 @@ inline const /* constexpr */ Asintf to_Asintf(const Asfloatf &f) {
     return Asintf  ::container_type({ to_Aint  (f[0]), to_Aint  (f[1]) });
 }
 
+/**
+ * General purpose audio rendering configuration structure passed to
+ * modules.
+ */
 struct ArenderConfig
 {
     unsigned long targetSampleRate;     /** Target stream sampling rate */

@@ -15,14 +15,29 @@ class Asample : public Asource
 private:
     typedef Filter::AscMixer AscMixer;
 
+    /**
+     * Pointer to audio buffer data.
+     *
+     * This pointer can be null at creation and then assigned to later.
+     */
     AiBuffer*   mSource;
+
+    /**
+     * Audio buffer data peak gain applied before being sent to mixer.
+     *
+     * Many sound formats allow the storage of audio samples beyond
+     * their own dynamic range. libawe will apply a negative gain to
+     * scale the data to fit within the 16-bit integer range which is
+     * compensated for when rendering.
+     */
     Afloat      mSourcePeak;
-    unsigned    mSampleRate;
-    std::string mSampleName;
+
+    unsigned    mSampleRate;    //! Sampling rate of sound sample.
+    std::string mSampleName;    //! Descriptive name of the sample.
 
 protected:
-    AscMixer    mMixer;
-    Aloop       mLoop;
+    AscMixer    mMixer; //! Sound mixer object
+    Aloop       mLoop;  //! Sample traversal state variable
 
 public:
     /**
@@ -39,29 +54,32 @@ public:
 
     /**
      * Load from file constructor.
-     * This function blocks execution and leaves source as nullptr if it fails to load the sample from file.
+     * This function blocks execution and leaves source as nullptr if
+     * it fails to load the sample from file.
      */
     Asample(const std::string &file, const Aloop::Mode &_loop = Aloop::Mode::__DEFAULT);
 
     /**
      * Load from memory constructor.
-     * This function blocks execution and leaves source as nullptr if it fails to load the sample from memory.
+     * This function blocks execution and leaves source as nullptr if
+     * it fails to load the sample from memory.
      */
     Asample(char* mptr, const size_t &size, const std::string &_name = "Unnamed sample", const Aloop::Mode &_loop = Aloop::Mode::__DEFAULT);
 
     virtual ~Asample() {}
 
-    inline bool setSource (AiBuffer* const _source, const Afloat &_peak, const unsigned &_rate)
+    /**
+     * Assigns a audio buffer to the sample.
+     * @param _source Audio buffer source.
+     * @param _peak   Audio buffer peak re-compensation.
+     * @param _rate   Audio buffer source sample rate.
+     */
+    inline void setSource(AiBuffer* const _source, const Afloat &_peak, const unsigned &_rate)
     {
-        if (mSource == nullptr) {
-            mSource     = _source;
-            mSourcePeak = _peak;
-            mSampleRate = _rate;
-            mLoop.end   = _source->getFrameCount();
-            return true;
-        } else {
-            return false;
-        }
+        mSource     = _source;
+        mSourcePeak = _peak;
+        mSampleRate = _rate;
+        mLoop.end   = _source->getFrameCount();
     }
 
     inline const AiBuffer * cgetSource() const { return mSource; }
@@ -97,13 +115,19 @@ public:
      */
     size_t skip(const size_t &pos, const bool &skip_silence = false);
 
-    // Asource pure function definition.
+    ////    Asource    ////
+
+    /**
+     * Replays the source from the beginning.
+     * Effectively calls stop() then play().
+     */
     virtual void make_active(void*) {
         stop();
         play();
     }
 
     virtual bool is_active() const { return !mLoop.paused; }
+
     /**
      * Render quality configuration:
      *  :: SKIP ::
@@ -128,7 +152,17 @@ public:
      *      Iterpolates if up-sampling. Decimates if down-sampling.
      */
     virtual void render(AfBuffer &buffer, const ArenderConfig &config);
-    virtual void drop() { delete mSource; mSource = nullptr; }
+
+    /**
+     * Deletes the source buffer and sets the pointer to null.
+     */
+    virtual void drop() {
+        if (mSource == nullptr)
+            return;
+
+        delete mSource;
+        mSource = nullptr;
+    }
 };
 
 }

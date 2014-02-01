@@ -17,12 +17,13 @@ class APortAudio
 {
 public:
     struct PaCallbackPacket {
-        std::mutex  *   mutex;      // Output FIFO buffer mutex
-        AfFIFOBuffer*   output;     // Output FIFO buffer
-        unsigned char   calls;      // Number of times PA ran this callback since last update.
-        unsigned char   underflows; // Number of times PA reported underflow problems since last update.
+        std::mutex  *   mutex;      //! Output FIFO buffer mutex
+        AfFIFOBuffer*   output;     //! Output FIFO buffer
+        unsigned char   calls;      //! Number of times PA ran this callback since last update.
+        unsigned char   underflows; //! Number of times PA reported underflow problems since last update.
     };
 
+    /** Host API type enumerator */
     enum class HostAPIType : int {
         Default = 0, // paInDevelopment
         DS      = paDirectSound,

@@ -11,15 +11,17 @@
 
 namespace awe {
 
-/** Audio data container class with interweaving channels
+/**
+ * Audio data container class with interweaving channels.
+ *
  * This class is used to contain audio data.
  */
 template< typename T >
 class Abuffer
 {
 private:
-    unsigned char  channels;
-    std::vector<T> pcm_data;
+    unsigned char  channels; //! Number of interwoven audio streams in this buffer
+    std::vector<T> pcm_data; //! The vector object holding the audio buffer
 
 public:
     ////    Derive everything from std::vector    //////////////////////
@@ -64,9 +66,9 @@ public:
 
     /**
      * New buffer constructor
-     * @param _channels number of channels on buffer
-     * @param _frames   number of frames to reserve
-     * @param _init     initialze samples in container or leave it empty?
+     * @param[in] _channels number of channels on buffer
+     * @param[in] _frames   number of frames to reserve
+     * @param[in] _init     initialze samples in container or leave it empty?
      */
     Abuffer(unsigned char _channels, size_type _frames, bool _init = true)
         : channels(_channels)
@@ -84,8 +86,6 @@ public:
 
     /**
      * Buffer from container constructor
-     * @param _channels  number of channels on buffer
-     * @param _container container to copy data from
      */
     template< class SourceIterator >
     Abuffer(unsigned char _channels, SourceIterator &_begin, SourceIterator &_end)
@@ -98,22 +98,44 @@ public:
 
     /**
      * Buffer copy constructor
-     * @param _other buffer to copy from
+     * @param[in] _other buffer to copy from
      */
     Abuffer(const Abuffer &_other)
         : Abuffer(_other.getChannelCount(), _other.cbegin(), _other.cend())
     { }
 
+    /**
+     * Buffer destructor
+     */
     ~Abuffer() { pcm_data.clear(); }
 
-
-    void reset(bool init = true)
+    /**
+     * Frees the memory allocated by the buffer.
+     * @return Number of samples on the old buffer.
+     */
+    size_type clear()
     {
-        size_type samples = (pcm_data.size() / channels) * channels;
-        pcm_data.clear();
-        pcm_data.reserve(samples);
-        if (init == true)
-            pcm_data.resize(samples);
+        size_type samples = pcm_data.size();
+        pcm_data.clear  ( );
+        pcm_data.reserve(0);
+        return samples;
+    }
+
+    /**
+     * Flushes the entire buffer to zero.
+     *
+     * The size of new buffer is rounded down to the smallest frame.
+     *
+     * @return Number of samples on the old buffer.
+     */
+    size_type reset()
+    {
+        size_type samples = pcm_data.size();
+        size_type new_size = (samples / channels) * channels;
+        pcm_data.clear  ( );
+        pcm_data.reserve(new_size);
+        pcm_data.resize (new_size);
+        return samples;
     }
 
     inline   unsigned char getChannelCount() const { return channels;                    } /** @return number of channels in the buffer             */

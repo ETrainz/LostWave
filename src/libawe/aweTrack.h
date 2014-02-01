@@ -16,60 +16,71 @@ typedef std::lock_guard<std::mutex> MutexLockGuard;
 
 namespace awe {
 
-/** Sound mixer class.
+/**
+ * Sound mixer class.
  *
- * Used to manage and mix multiple sound sources into one
- * output track. Filters can be chained via the filter rack
- * to apply post-mixing sound effects.
+ * Used to manage and mix multiple sound sources into one output track.
+ * Filters can be chained to the filter rack to apply post-mixing sound
+ * effects.
  *
- * All tracks are double buffered; the internal mixing pool
- * is labelled P while the output pool is labelled O.
+ * All tracks are double buffered; the internal inaccessible source
+ * mixing pool is labelled P while the output pool is labelled O.
  *
+ * Every track has two mutexes; one is used to lock the pool buffer,
+ * source list and pool config and the other is used to to lock the
+ * output buffer and filter rack.
  */
 class Atrack : public Asource
 {
     typedef Filter::AscRack     AscRack;
 
 private:
-    mutable std::mutex  mPmutex;    // Track pool mutex
-    mutable std::mutex  mOmutex;    // Track output mutex
+    mutable std::mutex  mPmutex;    //! Track pool mutex
+    mutable std::mutex  mOmutex;    //! Track output mutex
 
-    std::string         mName;      // Track label
-    ArenderConfig       mConfig;    // Track render configuration
+    std::string         mName;      //! Track label
+    ArenderConfig       mPconfig;   //! Track render configuration
 
-    AsourceSet  mPsources;  // Sound sources to mix from
-    AfBuffer    mPbuffer;   // Mixing buffer
-    AfBuffer    mObuffer;   // Output buffer
+    AsourceSet  mPsources;  //! Sound sources to mix from
+    AfBuffer    mPbuffer;   //! Mixing buffer
+    AfBuffer    mObuffer;   //! Output buffer
+    AscRack     mOfilter;   //! Post-mixing filter rack
 
-    AscRack     mOfilter;   // Post-mixing filter rack
-    bool        mqActive;   // Is this source active?
+    bool        mqActive;   //! Is this source active?
 
 private:
-    // Pull source into pool buffer, without mutex lock
+    /** Pull source into pool buffer, without mutex lock. */
     void fpull(Asource* src);
 
-    // Pull assigned sources into pool buffer, without mutex lock
+    /** Pull assigned sources into pool buffer, without mutex lock. */
     void fpull();
 
-    // Flip pool buffer with output buffer, without mutex lock
+    /** Flip pool buffer with output buffer, without mutex lock. */
     void fflip();
 
-    // Apply filter rack onto output buffer, without mutex lock
+    /** Apply filter rack onto output buffer, without mutex lock. */
     void ffilter();
 
 public:
     Atrack(
-            const size_t &sampleRate,
-            const size_t &frames,
-            const std::string &name = "Unnamed Track"
-          );
+        const size_t &sampleRate,
+        const size_t &frames,
+        const std::string &name = "Unnamed Track"
+    );
 
+    /**
+     * This call does nothing on a track object.
+     *
+     * Please track the source and filter objects by your own.
+     */
     virtual void drop() {}
+
     virtual void make_active(void*)
     {
         MutexLockGuard p_lock(mPmutex);
         mqActive = !mPsources.empty();
     }
+
     virtual bool is_active() const
     {
         MutexLockGuard p_lock(mPmutex);
@@ -78,20 +89,31 @@ public:
 
     virtual void render(AfBuffer &targetBuffer, const ArenderConfig &targetConfig);
 
-    inline const ArenderConfig& getConfig() const { return mConfig; }
+    inline const ArenderConfig& getConfig() const { return mPconfig; }
     inline       ArenderConfig  setConfig(const ArenderConfig &new_config)
     {
         MutexLockGuard p_lock(mPmutex);
         return new_config;
     }
 
+    /**
+     * Retrieves the track filter rack.
+     *
+     * You can obtain the mutex object controlling the rack through the
+     * Atrack::getMutex() call.
+     */
     inline AscRack& getRack() { return mOfilter; }
 
     inline const AsourceSet& getSources() const { return mPsources; }
     inline const AfBuffer  & getOutput () const { return mObuffer; }
 
+    /**
+     * Retrieves the output mutex object which controls the output
+     * buffer and the rack.
+     */
     inline std::mutex & getMutex() { return mOmutex; }
 
+    /** @return number of active sources within the pooling list */
     inline size_t count_active_sources() const
     {
         MutexLockGuard p_lock(mPmutex);
@@ -104,11 +126,13 @@ public:
         return count;
     }
 
+    /** @return number of sources within the pooling list */
     inline size_t count_sources() const {
         MutexLockGuard p_lock(mPmutex);
         return mPsources.size();
     }
 
+    /** Inserts a source into the pooling list */
     inline void attach_source(Asource* const src)
     {
         MutexLockGuard p_lock(mPmutex);
@@ -118,6 +142,10 @@ public:
         mqActive = true;
     }
 
+    /**
+     * Removes a source from the pooling list.
+     * @return false if the no objects were deleted from the pooling list.
+     */
     inline bool detach_source(Asource* const src)
     {
         MutexLockGuard p_lock(mPmutex);
@@ -126,18 +154,21 @@ public:
         return r;
     }
 
+    /** Pull assigned sources into pool buffer, with mutex lock. */
     inline void pull()
     {
         MutexLockGuard p_lock(mPmutex);
         fpull();
     }
 
+    /** Pulls the sources pool buffer, with mutex lock. */
     inline void pull(Asource *src)
     {
         MutexLockGuard p_lock(mPmutex);
         fpull(src);
     }
 
+    /** Flip pool buffer with output buffer, with mutex lock. */
     inline void flip()
     {
         // Lock both mutexes without deadlock.
@@ -153,6 +184,7 @@ public:
         ffilter();
     }
 
+    /** Pushes the output buffer into a queue buffer. */
     inline void push(AfFIFOBuffer &queue) const
     {
         MutexLockGuard o_lock(mOmutex);

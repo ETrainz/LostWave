@@ -9,24 +9,27 @@
 
 namespace awe {
 
-/** Master audio output interface
- * This class manages the audio output to an audio output library.
+/**
+ * Master audio output interface.
+ *
+ * This class manages the output of audio from libawe into the sound
+ * device via PortAudio.
  */
 class AEngine
 {
 protected:
-    APortAudio  mOutputDevice;
-    Atrack      mMasterTrack;
+    APortAudio  mOutputDevice;  //! PortAudio output device wrapper
+    Atrack      mMasterTrack;   //! Master output track
 
 public:
-    AEngine(size_t output_sample_rate = 48000,
-            size_t output_frame_rate = 4096,
-            APortAudio::HostAPIType device_type = APortAudio::HostAPIType::Default
-            ) :
-        mOutputDevice(),
-        mMasterTrack (output_sample_rate, output_frame_rate, "Output to Device")
+    AEngine(
+        size_t sampling_rate = 48000,
+        size_t op_frame_rate = 4096,
+        APortAudio::HostAPIType device_type = APortAudio::HostAPIType::Default
+    ) : mOutputDevice(),
+        mMasterTrack (sampling_rate, op_frame_rate, "Output to Device")
     {
-        if (mOutputDevice.init(output_sample_rate, output_frame_rate, device_type) == false)
+        if (mOutputDevice.init(sampling_rate, op_frame_rate, device_type) == false)
             throw std::runtime_error("libawe [exception] Could not initialize output device.");
     }
 
@@ -34,7 +37,20 @@ public:
 
     inline Atrack& getMasterTrack() { return mMasterTrack; }
 
-    /* TODO Add some sort of multi-threading support. */
+    /**
+     * Pulls audio mix from master track and pushes them into the
+     * output device.
+     *
+     * This operation is done only if the buffer in the output device
+     * does not have enough data for when the system demands them.
+     *
+     * This call may take a very long time to complete depending on the
+     * amount of work required to pull audio data into the master track
+     * and then mix them.
+     *
+     * @return False if the output device buffer has sufficient data
+     *         for the next time the system requests for them.
+     */
     virtual bool update()
     {
         if (mOutputDevice.getFIFOBuffer().size() < mMasterTrack.getOutput().getSampleCount())
