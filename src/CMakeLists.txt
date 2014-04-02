@@ -3,13 +3,16 @@ find_package(ClanLib REQUIRED)
 add_definitions("-std=c++11 -ggdb")
 
 add_executable(LostWave
+	clanExt_JSONReader.cpp clanExt_JSONFile.cpp
 	AudioManager.cpp AudioTrack.cpp InputManager.cpp
 	Chart.cpp Chart_BMS.cpp Chart_O2Jam.cpp Music.cpp MusicScanner.cpp
-	Chrono.cpp JSON.cpp Measure.cpp Note.cpp
+	Chrono.cpp Measure.cpp Note.cpp
+	UI/Timer.cpp UI/TimerFPS.cpp
+	UI/Slider.cpp
 	UI/FFT.cpp
 	UI/Tracker.cpp
-	UI/MusicSelector
-	Game.cpp # Game_Playing.cpp Game_Selection.cpp
+	UI/MusicSelector.cpp
+	Game.cpp
 	Main.cpp
 )
 
@@ -25,4 +28,4 @@ target_link_libraries(LostWave
 	${ClanLib_CSSLayout_LIBRARY}
 	${ClanLib_GUI_LIBRARY}
 	${ClanLib_Network_LIBRARY}
-	)
+)

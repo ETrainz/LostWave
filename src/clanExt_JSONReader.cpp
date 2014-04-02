@@ -1,9 +1,18 @@
-//  JSON.cpp :: JSON reader
-//  Copyright 2013 Keigen Shu
+//  clanExt_JSONReader.cpp :: JSON reader
+//  authored by Chu Chin Kuan
+//
+//  :: LICENSE AND COPYRIGHT ::
+//
+//  The author disclaims copyright to this source code.
+//
+//  The author or authors of this code dedicate any and all copyright interest
+//  in this code to the public domain. We make this dedication for the benefit
+//  of the public at large and to the detriment of our heirs and successors.
+//
+//  We intend this dedication to be an overt act of relinquishment in perpetuity
+//  of all present and future rights to this code under copyright law.
 
-#include "JSON.hpp"
-
-////    JSONReader    /////////////////////////////////////////////////
+#include "clanExt_JSONReader.hpp"
 
 JSONReader::JSONReader() : mRoot() { }
 JSONReader::JSONReader(clan::JsonValue const &root) : mRoot(root) { }
@@ -20,7 +29,7 @@ clan::JsonValue& JSONReader::getJsonValue(std::string const &path, clan::JsonVal
         throw std::out_of_range("Could not find member '" + part + "'");
 
     // TODO Parse JSON arrays
-    // TODO Create JSON value on path if it doesn't exist
+    // TODO Create JSON nodes for path if it doesn't exist
 
     if (end != std::string::npos)
         return getJsonValue(path.substr(end + 1, std::string::npos), node->second);
@@ -28,7 +37,7 @@ clan::JsonValue& JSONReader::getJsonValue(std::string const &path, clan::JsonVal
         return node->second;
 }
 
-clan::JsonValue const & JSONReader::getJsonValue(std::string const &path, clan::JsonValue const & root)
+clan::JsonValue const & JSONReader::getJsonValue(std::string const &path, clan::JsonValue const &root)
 {
     if (path.empty())
         return root;
@@ -95,7 +104,6 @@ clan::Color JSONReader::getColor(std::string const &path) const
         }
     }
 
-    // Still here???
     throw clan::JsonException(
             "Invalid JSON type while parsing color '" + path + "'."
             );
@@ -114,7 +122,6 @@ clan::Vec2f JSONReader::getVec2f(std::string const &path) const
             return clan::Vec2f(array[0].to_float(), array[1].to_float());
     }
 
-    // Still here???
     throw clan::JsonException(
             "Invalid JSON type while parsing 2D floating-point vector '" + path + "'."
             );
@@ -133,7 +140,6 @@ clan::Vec2i JSONReader::getVec2i(std::string const &path) const
             return clan::Vec2i(array[0].to_int(), array[1].to_int());
     }
 
-    // Still here???
     throw clan::JsonException(
             "Invalid JSON type while parsing 2D integer vector '" + path + "'."
             );
@@ -170,9 +176,8 @@ clan::Rectf JSONReader::getRectf(std::string const &path) const
             }
     }
 
-    // Still here???
     throw clan::JsonException(
-            "Invalid JSON type while parsing 2D integer vector '" + path + "'."
+            "Invalid JSON type while parsing 2D floating-point rectangle '" + path + "'."
             );
 
     return clan::Rectf();
@@ -207,9 +212,8 @@ clan::Rect JSONReader::getRecti(std::string const &path) const
             }
     }
 
-    // Still here???
     throw clan::JsonException(
-            "Invalid JSON type while parsing 2D integer vector '" + path + "'."
+            "Invalid JSON type while parsing 2D integer rectangle '" + path + "'."
             );
 
     return clan::Rect();
@@ -218,6 +222,8 @@ clan::Rect JSONReader::getRecti(std::string const &path) const
 clan::FontDescription JSONReader::getFontDesc(std::string const &path) const
 {
     clan::FontDescription font_desc = clan::FontDescription();
+
+    font_desc.set_subpixel(false);
 
     clan::JsonValue const &json = getJsonValue(path, mRoot);
     if (json.is_object())
@@ -266,6 +272,20 @@ clan::FontDescription JSONReader::getFontDesc(std::string const &path) const
                     throw clan::JsonException(
                             "Invalid JSON type while parsing typeface property '" + path + "'."
                             );
+            } else if (node.first.compare("antialias") == 0) {
+                if (node.second.is_boolean())
+                    font_desc.set_anti_alias(node.second.to_boolean());
+                else
+                    throw clan::JsonException(
+                            "Invalid JSON type while parsing typeface property '" + path + "'."
+                            );
+            } else if (node.first.compare("subpixel") == 0) {
+                if (node.second.is_boolean())
+                    font_desc.set_subpixel(node.second.to_boolean());
+                else
+                    throw clan::JsonException(
+                            "Invalid JSON type while parsing typeface property '" + path + "'."
+                            );
             } else { /* TODO Generate warning ? */ }
         }
     } else {
@@ -274,7 +294,6 @@ clan::FontDescription JSONReader::getFontDesc(std::string const &path) const
                 );
     }
 
-    font_desc.set_subpixel(false);
     return font_desc;
 }
 
@@ -299,23 +318,4 @@ std::string JSONReader::getString(std::string const &path) const
     return getJsonValue(path, mRoot).to_string();
 }
 
-
-////    JSONFile    ///////////////////////////////////////////////////
-
-JSONFile::JSONFile(std::string const &path) :
-    JSONReader(),
-    mFilePath(path)
-{
-    load();
-}
-
-void JSONFile::load()
-{
-    mRoot = clan::JsonValue::from_json(clan::File::read_text(mFilePath));
-}
-
-void JSONFile::save()
-{
-    clan::File::write_text(mFilePath, mRoot.to_json());
-}
 

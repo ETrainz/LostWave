@@ -10,6 +10,7 @@
 #include "libawe/Filters/3BEQ.h"
 #include "libawe/Filters/Mixer.h"
 #include "libawe/Filters/Metering.h"
+#include "UI/Slider.hpp"
 
 /* Margin 1px; Padding 2px;
  */
@@ -23,15 +24,15 @@ private:
     awe::Filter::AscMetering    *mMeter;
 
     ////    GUI Controls    ///////////////////////////////////////////
-    clan::Slider                mGCsdvEQGainL;
-    clan::Slider                mGCsdvEQGainM;
-    clan::Slider                mGCsdvEQGainH;
+    UI::Slider                  mGCsdvEQGainL;
+    UI::Slider                  mGCsdvEQGainM;
+    UI::Slider                  mGCsdvEQGainH;
 
-    clan::Slider                mGCsdhEQFreqL;
-    clan::Slider                mGCsdhEQFreqH;
+    UI::Slider                  mGCsdhEQFreqL;
+    UI::Slider                  mGCsdhEQFreqH;
 
-    clan::Slider                mGCsdvGain;
-    clan::Slider                mGCsdhPan;
+    UI::Slider                  mGCsdvGain;
+    UI::Slider                  mGCsdhPan;
     /*
     clan::Button                mGCbtnMute;
     clan::Button                mGCbtnToggleSize;

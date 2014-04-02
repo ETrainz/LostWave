@@ -4,7 +4,7 @@
 #include <random>
 #include <ClanLib/display.h>
 #include <ClanLib/gui.h>
-#include "JSON.hpp"
+#include "clanExt_JSONFile.hpp"
 #include "AudioManager.hpp"
 #include "InputManager.hpp"
 

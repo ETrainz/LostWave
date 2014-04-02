@@ -1,28 +1,28 @@
 //  Chart.hpp :: Chart class object declaration
-//  Copyright 2011 - 2013 Keigen Shu
+//  Copyright 2011 - 2014 Keigen Shu
 
 #ifndef CHART_H
 #define CHART_H
 
 #include <string>
-#include "__zzCore.hpp" // CL_Image
-#include "Measure.hpp"  // Measure, Sequence
-#include "AudioManager.hpp" // SampleMap
+#include "__zzCore.hpp"
+#include "Measure.hpp"
+#include "AudioManager.hpp"
 
 class Chart
 {
 protected:
-    std::string     name;
-    std::string     charter;
-    unsigned int    level;
-    unsigned int    events;
-    unsigned int    notes;
-    unsigned int    duration;
-    double          tempo;
+    std::string         name;       //! Name of this chart
+    std::string         charter;    //! Name of the person who made this chart
+    unsigned int        level;      //! Difficulty rating number of this chart
+    unsigned int        events;     //! Number of event objects
+    unsigned int        notes;      //! Number of note objects
+    unsigned int        duration;   //! Length of chart in seconds
+    double              tempo;      //! Starting tempo of this chart in BPM
 
-    clan::PixelBuffer  cover;   // System (not GPU) pixel buffer.
-    Sequence        sequence;   // Measure map
-    SampleMap       sample_map; // Sample map
+    clan::PixelBuffer   cover;      //! The cover art pixel buffer for this chart
+    Sequence            sequence;   //! The event sequence object
+    SampleMap           sample_map; //! The ID to Sample map for this chart
 
     bool       cover_loaded;
     bool    sequence_loaded;

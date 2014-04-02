@@ -1,6 +1,3 @@
-//  Main.cpp :: Application main code
-//  Copyright 2013 Keigen Shu
-
 #include "__zzCore.hpp"
 
 #ifdef __USE_D3D
@@ -10,12 +7,15 @@
 #endif
 
 #include "Main.hpp"
-#include "JSON.hpp"
 #include "Game.hpp"
 
 #include "UI/MusicSelector.hpp"
 #include "UI/FFT.hpp"
 #include "UI/Tracker.hpp"
+
+#include "UI/Timer.hpp"
+#include "UI/TimerFPS.hpp"
+
 #include "AudioTrack.hpp"
 #include "MusicScanner.hpp"
 #include "Chart_O2Jam.hpp"
@@ -47,7 +47,7 @@ KeyList default_keylist
 
 
 
-static void autoVisualize(AudioManager* am, UI::FFT* FFTbg, UI::FFT* FFTp1, UI::FFT* FFTp2)
+static void autoVisualize(AudioManager* am, UI::FFT* FFTbg, UI::FFT* FFTp1, UI::FFT* FFTp2, UI::Timer* timer)
 {
     ulong count = 0;
 
@@ -61,6 +61,7 @@ static void autoVisualize(AudioManager* am, UI::FFT* FFTbg, UI::FFT* FFTp1, UI::
                 FFTbg->update(am->getMasterTrack().getOutput());
                 FFTp1->update(am->getTrackMap()->at(1)->getOutput());
                 FFTp2->update(am->getTrackMap()->at(2)->getOutput());
+                timer->set(new_count - count);
                 count = new_count;
             }
             am->getMutex().unlock();
@@ -108,6 +109,8 @@ int App::main(std::vector<std::string> const &args)
 
         Game* game = Game::create(clDWD);
 
+        UI::TimerFPS* fps = new UI::TimerFPS(game);
+
         {   // Create audio visuals thread
             uint FFTbars = config.get_if_else_set(
                 &JSONReader::getInteger, "audio.fft.bars", 128,
@@ -135,6 +138,8 @@ int App::main(std::vector<std::string> const &args)
                     FFTbars, FFTfade
                     );
 
+            UI::Timer* timer = new UI::Timer(game, {1.0f, 0.8f, 0.0f, 0.6f}, {1.0f, 1.0f, 0.0f, 0.8f});
+
             FFTbg->set_constant_repaint(true);
             FFTp1->set_constant_repaint(true);
             FFTp2->set_constant_repaint(true);
@@ -144,7 +149,7 @@ int App::main(std::vector<std::string> const &args)
             AudioTrack* ATP1 = new AudioTrack(game->am.getTrackMap()->at(1), game, point2i{ 300,0 });
             AudioTrack* ATP2 = new AudioTrack(game->am.getTrackMap()->at(2), game, point2i{ 350,0 });
 
-            std::thread* av_thread = new std::thread(autoVisualize, &game->am, FFTbg, FFTp1, FFTp2);
+            std::thread* av_thread = new std::thread(autoVisualize, &game->am, FFTbg, FFTp1, FFTp2, timer);
             game->am.attach_thread(av_thread);
         }
 

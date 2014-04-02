@@ -1,6 +1,3 @@
-//  UI/Tracker.hpp :: Note tracker UI component
-//  Copyright 2013 Keigen Shu
-
 #include "Tracker.hpp"
 #include "../Chrono.hpp"
 #include "../Chart.hpp"
@@ -19,8 +16,7 @@ Tracker::Tracker(
     TClock             *clock
 ) : clan::GUIComponent(
         reinterpret_cast<clan::GUIComponent*>(game),
-        { area, false },
-        "tracker"),
+        "Tracker"),
     mJudge(judge),
     mRankScores({
             {EJRank::PERFECT, 0},
@@ -54,6 +50,8 @@ Tracker::Tracker(
 
     mTime(mClock->cgetTTime())
 {
+    set_geometry(area);
+
     for(auto key : show_keys) {
         mShowKeys.push_back(key.first);
         mKeyInputs .insert(key);
@@ -130,6 +128,7 @@ void Tracker::render(clan::Canvas& canvas, const recti& clip_rect)
     float b = z - mSpeedX * (mJudge.cgetTP() + mJudge.cgetTC() + mJudge.cgetTG() + mJudge.cgetTB());
 
     canvas.fill_rect({0, 0, 168, z}, { 1.0f, 1.0f, 1.0f, 0.1f});
+
     canvas.fill_rect({0, p, 168, z}, { 0.0f, 0.5f, 1.0f, 0.1f});
     canvas.fill_rect({0, c, 168, p}, { 0.0f, 1.0f, 0.5f, 0.1f});
     canvas.fill_rect({0, g, 168, c}, { 0.5f, 1.0f, 0.0f, 0.1f});
@@ -140,7 +139,7 @@ void Tracker::render(clan::Canvas& canvas, const recti& clip_rect)
         {
             rectf rect  = getDrawRect(pair.first, 0);
             rect.top    = 0;
-            rect.bottom = canvas.get_height();
+            rect.bottom = get_height();
             canvas.fill_rect(rect, { 1.0f, 1.0f, 1.0f, 0.1f });
         }
 
@@ -148,6 +147,9 @@ void Tracker::render(clan::Canvas& canvas, const recti& clip_rect)
         note->render(*this, canvas);
 
     mRenderList.clear();
+
+    if (mClock->isTStopped())
+        canvas.fill_rect({0,0,168,z}, { 1.0f, 1.0f, 1.0f, 0.5f });
 }
 
 
@@ -302,28 +304,29 @@ void Tracker::loop_Notes(NoteList &notes, uint &cache)
 
 bool Tracker::process_input(const clan::InputEvent& event)
 {
+    if (debug)
+        dump_event(event, "Tracker");
+
     /****/ if (event.device.get_type() == clan::InputDevice::Type::keyboard)
     {
         /****/ if (event.type == clan::InputEvent::Type::pressed)
         {
             switch (event.id)
             {
+                case clan::InputCode::keycode_escape:
+                    exit_with_code(0);
+                    return true;
             }
 
             return false;
         } else if (event.type == clan::InputEvent::Type::released) {
             switch (event.id)
             {
-                case clan::InputCode::keycode_escape:
-                    exit_with_code(0);
-                    return true;
             }
         }
     } else if (event.device.get_type() == clan::InputDevice::Type::pointer) {
 
     }
-
-    if (debug) dump_event(event, "Tracker");
 
     return false;
 }

@@ -1,55 +1,22 @@
-//  JSON.hpp :: JSON reader
-//  Copyright 2013 Keigen Shu
+//  clanExt_JSONReader.hpp :: JSON reader
+//  authored by Chu Chin Kuan
+//
+//  :: LICENSE AND COPYRIGHT ::
+//
+//  The author disclaims copyright to this source code.
+//
+//  The author or authors of this code dedicate any and all copyright interest
+//  in this code to the public domain. We make this dedication for the benefit
+//  of the public at large and to the detriment of our heirs and successors.
+//
+//  We intend this dedication to be an overt act of relinquishment in perpetuity
+//  of all present and future rights to this code under copyright law.
 
-#ifndef JSON_H
-#define JSON_H
+#ifndef H_CLAN_EXT_JSON
+#define H_CLAN_EXT_JSON
 
-#include <map>
 #include <ClanLib/core.h>
 #include <ClanLib/display.h>
-
-/**
- * Use value from resource <<FNC(RES,VAL)>> if that value
- * PASSES the supplied condition (CMP).
- *
- * @param FNC function to call
- * @param RES resource to read from XML
- * @param CMP comparison
- * @param VAL default to use resource does not exist or if condition FAILS.
- */
-#define TAKE_IF_TRUE(FUNCTION,ARG,COMPARE,DEFAULT) \
-    [=]() { \
-        try { \
-            auto VALUE = FUNCTION(ARG); \
-            return (VALUE COMPARE) ? VALUE : DEFAULT; \
-        } catch (std::exception &e) { /* Can't get the value :/ */ \
-            clan::Console::write_line(e.what()); \
-            return DEFAULT; \
-        } \
-    } () /* Call the lambda now */
-
-/**
- * Use value from resource <<FNC(RES,VAL)>> if that value
- * FAILS the supplied condition (CMP).
- *
- * Example  : TAKE_IF_FALSE(conf.getInteger,"video/resh",< 600,600)
- * Expanded : conf.getInteger("video/resh",600) < 600 ? 600 : conf.getInteger("video/resh",600)
- *
- * @param FNC function to call (Config::getSomething)
- * @param RES resource to read from XML ("dir/val")
- * @param CMP comparison operator ("== false", "< SomeValue", ">= 128")
- * @param VAL default to use resource does not exist or if condition PASSES.
- */
-#define TAKE_IF_FALSE(FUNCTION,ARG,COMPARE,DEFAULT) \
-    [=]() { \
-        try { \
-            auto VALUE = FUNCTION(ARG); \
-            return (VALUE COMPARE) ? DEFAULT : VALUE; \
-        } catch (std::exception &e) { /* Can't get the value :/ */ \
-            clan::Console::write_line(e.what()); \
-            return DEFAULT; \
-        } \
-    } ()
 
 
 class JSONReader
@@ -182,20 +149,6 @@ public:
 
             return value;
         }
-};
-
-class JSONFile : public JSONReader
-{
-private:
-    std::string const mFilePath;
-
-public:
-    JSONFile(std::string const &path);
-
-    inline std::string const& getPath() { return mFilePath; }
-
-    void load();
-    void save();
 };
 
 #endif

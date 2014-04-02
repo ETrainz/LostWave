@@ -1,5 +1,5 @@
 //  aweBuffer.h :: Data container template definition
-//  Copyright 2012 - 2013 Keigen Shu
+//  Copyright 2012 - 2014 Keigen Shu
 
 #ifndef AWE_BUFFER_H
 #define AWE_BUFFER_H
@@ -146,10 +146,10 @@ public:
     inline       size_type getFrameSize   () const { return sizeof(T) * channels;        } /** @return size of a single frame          (in bytes)   */
 
     inline       pointer  getFrame (size_type pos = 0)       /** @return          pointer to frame in buffer at frame offset index or nullptr if offset is out-of-bounds */
-    { return (pcm_data.size() > pos * channels) ?            pcm_data.data() + (pos * channels) : nullptr; }
+    { return (pcm_data.size() > pos * channels) ? pcm_data.data() + (pos * channels) : nullptr; }
 
     inline const_pointer cgetFrame (size_type pos = 0) const /** @return constant pointer to frame in buffer at frame offset index or nullptr if offset is out-of-bounds */
-    { return (pcm_data.size() > pos * channels) ?            pcm_data.data() + (pos * channels) : nullptr; }
+    { return (pcm_data.size() > pos * channels) ? pcm_data.data() + (pos * channels) : nullptr; }
 
     /** @return copy of frame in buffer at frame offset index or empty frame if offset is out-of-bounds */
     template< unsigned char Channels >
@@ -190,18 +190,18 @@ public:
         }
     }
 
-    void setSample (size_type pos, value_type value)
+    inline void setSample (size_type pos, value_type value)
     {
         pcm_data[pos] = value;
     }
 
-    void setFrame  (size_type pos, value_type value)
+    inline void setFrame  (size_type pos, value_type value)
     {
         for(size_type i=0; i<channels; ++i)
             pcm_data[pos*channels  ] = value;
     }
 
-    void setFrame  (size_type pos, const_pointer value)
+    inline void setFrame  (size_type pos, const_pointer value)
     {
         for(size_type i=0; i<channels; ++i)
             pcm_data[pos*channels+i] = value[i];

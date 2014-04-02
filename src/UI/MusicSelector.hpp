@@ -1,11 +1,11 @@
 //  UI/MusicSelector.hpp :: Music selection UI component
-//  Copyright 2013 Keigen Shu
+//  Copyright 2013 - 2014 Keigen Shu
 
 #ifndef UI_MUSIC_SELECTOR_H
 #define UI_MUSIC_SELECTOR_H
 
 #include "../__zzCore.hpp"
-#include "../JSON.hpp"
+#include "../clanExt_JSONReader.hpp"
 #include "../Music.hpp"
 
 namespace UI {

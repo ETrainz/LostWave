@@ -3,7 +3,7 @@
 #include "Note.hh"      // Declare global audio manager on Note.hh
 
 Game::Game(clan::DisplayWindow &_clDW, clan::GUIManager &_clUI) :
-    GUIComponent(&_clUI, { _clDW.get_geometry(), false }, "Game"),
+    GUIComponent(&_clUI, { recti{ 0, 0, _clDW.get_gc().get_size() }, false }, "Game"),
     conf("config.json"),
     skin("skin.json"),
     clDW(_clDW),
@@ -28,7 +28,9 @@ void Game::on_window_close()
 
 bool Game::process_input(clan::InputEvent const &event)
 {
-    // dump_event(event, "Game");
+    if (debug)
+        dump_event(event, "Game");
+
     if (event.device.get_type() == clan::InputDevice::Type::keyboard)
         if (event.type == clan::InputEvent::Type::pressed)
             if (event.id   == clan::InputCode::keycode_escape) {

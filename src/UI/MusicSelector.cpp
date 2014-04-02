@@ -1,13 +1,10 @@
-//  UI/MusicSelector.hpp :: Music selection UI component
-//  Copyright 2013 Keigen Shu
-
 #include "MusicSelector.hpp"
 
 namespace UI {
 
 // Constructor
 MusicSelector::MusicSelector(clan::GUIComponent *parent, JSONReader &skin, MusicList const &list) :
-    clan::GUIComponent(parent, { recti(0, 0, parent->get_size()), false }, "music_selector"),
+    clan::GUIComponent(parent, "music_selector"),
     mMusicList(list),
 
     // List element starting offset
@@ -84,6 +81,9 @@ MusicSelector::MusicSelector(clan::GUIComponent *parent, JSONReader &skin, Music
         mSbf = clan::Font(canvas, skin.getFontDesc("theme.music-selector.selected-body-font"));
 
         set_constant_repaint(true);
+        set_focus(true);    // Grab keyboard focus.
+        set_default(true);  // Grab Enter key.
+        set_geometry(recti{0, 0, parent->get_size()});
 
         func_render().set(this, &MusicSelector::render);
         func_input ().set(this, &MusicSelector::process_input);
@@ -113,7 +113,12 @@ Chart* MusicSelector::get() const
 ////    GUI Component Callbacks    ////////////////////////////////
 bool MusicSelector::process_input(const clan::InputEvent& event)
 {
-    // dump_event(event, "MusicSelector");
+    if (is_enabled() == false)
+        return false;
+
+    if (debug)
+        dump_event(event, "MusicSelector");
+
     /****/ if (event.device.get_type() == clan::InputDevice::Type::keyboard)
     {
         /****/ if (event.type == clan::InputEvent::Type::pressed)
@@ -155,7 +160,7 @@ bool MusicSelector::process_input(const clan::InputEvent& event)
             else if ((mVptr - mVtop) <= 0)
                 mVtop = mVptr;
 
-            return false;
+            return true;
         } else if (event.type == clan::InputEvent::Type::released) {
             switch (event.id)
             {
@@ -212,12 +217,12 @@ void MusicSelector::render(clan::Canvas& canvas, const recti& clip_rect)
     if (mBGImg.is_null() == false)
     {
         float scale = std::min(
-            static_cast<float>(canvas.get_width ()) / static_cast<float>(mBGImg.get_width ()),
-            static_cast<float>(canvas.get_height()) / static_cast<float>(mBGImg.get_height())
+            static_cast<float>(get_width ()) / static_cast<float>(mBGImg.get_width ()),
+            static_cast<float>(get_height()) / static_cast<float>(mBGImg.get_height())
         );
 
         mBGImg.draw( canvas, alignCC(
-            static_cast<sizef>(canvas.get_size()),
+            static_cast<sizef>(get_size()),
             static_cast<sizef>(mBGImg.get_size()) * scale
         ) );
     }

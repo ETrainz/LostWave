@@ -1,6 +1,3 @@
-//  UI/FFT.cpp :: FFT visualizer
-//  Copyright 2013 Keigen Shu
-
 #include "FFT.hpp"
 
 namespace UI {
@@ -52,7 +49,7 @@ FFT::FFT(
     float fade,
     IEWindowType window,
     IEScaleType  scale
-)   : clan::GUIComponent(parent, { area, false }, "FFT")
+)   : clan::GUIComponent(parent, "FFT")
     , mFrames       (frames - (frames % 2))
     , mFade         (fade)
     , mWindowType   (window)
@@ -62,20 +59,22 @@ FFT::FFT(
     , mOutput       (2, mFrames)
     , mSpectrum     (2, 0)
 {
+    set_geometry(area);
+
     setBands(bands);
     setWindow(window);
     setSampleRate(sample_rate);
 
     kCl = kiss_fftr_alloc(mFrames, 0, NULL, NULL);
     kCr = kiss_fftr_alloc(mFrames, 0, NULL, NULL);
-    
+
     kIl = (kiss_fft_scalar*)calloc(mFrames, sizeof(kiss_fft_scalar));
     kIr = (kiss_fft_scalar*)calloc(mFrames, sizeof(kiss_fft_scalar));
 
     kOl = (kiss_fft_cpx*)calloc(mFrames, sizeof(kiss_fft_cpx));
     kOr = (kiss_fft_cpx*)calloc(mFrames, sizeof(kiss_fft_cpx));
 
-    // Calculate band translation table
+    set_focus_policy(clan::GUIComponent::FocusPolicy::focus_refuse);
 
     func_render().set(this, &FFT::render);
 }
@@ -100,7 +99,7 @@ void FFT::setSampleRate(ulong rate)
 void FFT::setBands(ulong n)
 {
     mBands = std::min(mFrames, n);
-    
+
     mBandX.clear();
     mBandX.reserve(1+mBands);
     mBandX.resize (1+mBands);
@@ -238,12 +237,12 @@ void FFT::render(clan::Canvas &canvas, recti const &clip_rect)
     if (is_enabled() == false)
         return;
 
-    float bandw = static_cast<float>(canvas.get_height()) / static_cast<float>(mBands);
-    float midpt = static_cast<float>(canvas.get_width ()) / 2.0f;
+    float bandw = static_cast<float>(get_height()) / static_cast<float>(mBands);
+    float midpt = static_cast<float>(get_width ()) / 2.0f;
 
     // Draw metering lines
     canvas.draw_line(
-        midpt, 0, midpt, canvas.get_height(),
+        midpt, 0, midpt, get_height(),
         clan::Colorf(1.0f, 1.0f, 1.0f, 0.05f)
         );
 
@@ -254,11 +253,11 @@ void FFT::render(clan::Canvas &canvas, recti const &clip_rect)
     {
         float j = static_cast<float>(i) * l;
         canvas.draw_line(
-            midpt - j, 0, midpt - j, canvas.get_height(),
+            midpt - j, 0, midpt - j, get_height(),
             clan::Colorf(1.0f, 1.0f, 1.0f, 0.01f)
             );
         canvas.draw_line(
-            midpt + j, 0, midpt + j, canvas.get_height(),
+            midpt + j, 0, midpt + j, get_height(),
             clan::Colorf(1.0f, 1.0f, 1.0f, 0.01f)
             );
     }
@@ -267,7 +266,7 @@ void FFT::render(clan::Canvas &canvas, recti const &clip_rect)
     clan::ColorHSVf color(0.0f, 1.0f, 1.0f, 0.1f);
     float inc = 270.0f / mBands;
 
-    for (ulong i = 0; i < mBands; ++i)
+    for(ulong i = 0; i < mBands; ++i)
     {
         color.h += inc;
         rectf out {

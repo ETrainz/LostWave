@@ -21,7 +21,7 @@ const sizei kPanSize        = { kWidth - 2 * kPadding, kSliderWidth };
 const sizei kMeterSize      = { kPadding - 1 , 120 };   // Single meter
 
 constexpr int   kMarkerWidth    = kPadding;
-const sizei kFaderSize      = {(kWidth - 3 * kPadding) / 3, 120 };
+const sizei kFaderSize      = {(kWidth - 3 * kPadding) / 3, 120 + 2 * kPadding };
 
 const sizei kSize           = {
     kWidth,
@@ -42,7 +42,7 @@ AudioTrack::AudioTrack(
     awe::Atrack        *source,
     clan::GUIComponent *parent,
     point2i             pos
-)   : clan::GUIComponent(parent, { { pos, kSize }, false }, "AudioTrack")
+)   : clan::GUIComponent(parent, "AudioTrack")
     , mTrack(source)
     , m3BEQ (new awe::Filter::Asc3BEQ(
                 mTrack->getConfig().targetSampleRate,
@@ -66,6 +66,8 @@ AudioTrack::AudioTrack(
     , mGCsdvGain(this)
     , mGCsdhPan (this)
 {
+    set_geometry(recti{pos, kSize});
+
     mTrack->getRack().attach_filter(m3BEQ);
     mTrack->getRack().attach_filter(mMixer);
     mTrack->getRack().attach_filter(mMeter);
@@ -83,9 +85,9 @@ AudioTrack::AudioTrack(
             kEQGainSize
             });
 
-    mGCsdvEQGainL.set_vertical(true);
-    mGCsdvEQGainM.set_vertical(true);
-    mGCsdvEQGainH.set_vertical(true);
+    mGCsdvEQGainL.set_direction(UI::Slider::Direction::DOWN);
+    mGCsdvEQGainM.set_direction(UI::Slider::Direction::DOWN);
+    mGCsdvEQGainH.set_direction(UI::Slider::Direction::DOWN);
 
     mGCsdvEQGainL.set_ranges(-10, 10, 2, 5);
     mGCsdvEQGainM.set_ranges(-10, 10, 2, 5);
@@ -99,6 +101,10 @@ AudioTrack::AudioTrack(
     mGCsdvEQGainM.func_value_changed().set(this, &AudioTrack::eq_gain_changed);
     mGCsdvEQGainH.func_value_changed().set(this, &AudioTrack::eq_gain_changed);
 
+    mGCsdvEQGainL.set_focus_policy(focus_parent);
+    mGCsdvEQGainM.set_focus_policy(focus_parent);
+    mGCsdvEQGainH.set_focus_policy(focus_parent);
+
     ////    EQ FREQ    ////
     mGCsdhEQFreqL.set_geometry({ koEQFreq, kEQFreqSize });
     mGCsdhEQFreqH.set_geometry({
@@ -107,8 +113,8 @@ AudioTrack::AudioTrack(
             kEQFreqSize
             });
 
-    mGCsdhEQFreqL.set_horizontal(true);
-    mGCsdhEQFreqH.set_horizontal(true);
+    mGCsdhEQFreqL.set_direction(UI::Slider::Direction::RIGHT);
+    mGCsdhEQFreqH.set_direction(UI::Slider::Direction::RIGHT);
 
     mGCsdhEQFreqL.set_ranges(0, 20, 2, 5);
     mGCsdhEQFreqH.set_ranges(0, 20, 2, 5);
@@ -119,28 +125,32 @@ AudioTrack::AudioTrack(
     mGCsdhEQFreqL.set_position(12);
     mGCsdhEQFreqH.set_position(12);
 
+    mGCsdhEQFreqL.set_focus_policy(focus_parent);
+    mGCsdhEQFreqH.set_focus_policy(focus_parent);
+
     ////    PAN    ////
     mGCsdhPan.set_geometry({ koPan, kPanSize });
-    mGCsdhPan.set_horizontal(true);
+    mGCsdhPan.set_direction(UI::Slider::Direction::RIGHT);
     mGCsdhPan.set_ranges(-10, 10, 2, 5);
     mGCsdhPan.set_position(0);
 
     mGCsdhPan.func_value_changed().set(this, &AudioTrack::mixer_value_changed);
 
-    ////    FADER    ////
-    int range = kFaderSize.height - 6; // Thumb height == 6
+    mGCsdhPan.set_focus_policy(focus_parent);
 
+    ////    FADER    ////
     mGCsdvGain.set_geometry({
             get_width() - kPadding - kFaderSize.width,
-            koMeter.y + kPadding,
+            koMeter.y,
             kFaderSize
             });
-    mGCsdvGain.set_vertical(true);
-    mGCsdvGain.set_ranges(0, range, 2, 8); // 0 ~ 120; tick step 2; page step 8
+    mGCsdvGain.set_direction(UI::Slider::Direction::DOWN);
+    mGCsdvGain.set_ranges(0, 119, 2, 8); // 0 ~ 120; tick step 2; page step 8
     mGCsdvGain.set_position(96);
 
     mGCsdvGain.func_value_changed().set(this, &AudioTrack::mixer_value_changed);
 
+    mGCsdvGain.set_focus_policy(focus_parent);
 
 
     func_render().set(this, &AudioTrack::render);
@@ -259,19 +269,19 @@ void AudioTrack::render(clan::Canvas &canvas, const recti &clip_rect)
     {
         // draw dB lines, y + 1 because of dBFS round up
         int o = 4 * kPadding + 2 * kMeterSize.width + 1;
-        int t = koMeter.y + kPadding;
+        int t = 1 + koMeter.y + kPadding;
 
-        for(int i = 1; i < get_height(); i += 16)
+        for(int i = t; i < get_height(); i += 16)
             canvas.draw_line(
-                    o               , t + i,
-                    o + kMarkerWidth, t + i,
+                    o               , i,
+                    o + kMarkerWidth, i,
                     clan::Colorf::grey
                     );
 
         // 0dBFS full line
         canvas.draw_line(
-                o               , t + 96 + 1,
-                o + kMarkerWidth, t + 96 + 1,
+                o               , t + 96,
+                o + kMarkerWidth, t + 96,
                 clan::Colorf::black
                 );
     }

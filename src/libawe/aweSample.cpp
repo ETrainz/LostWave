@@ -1,5 +1,5 @@
 //  aweSample.cpp :: Sound sample class
-//  Copyright 2012 - 2013 Keigen Shu
+//  Copyright 2012 - 2014 Keigen Shu
 
 #include "aweSample.h"
 
@@ -94,9 +94,10 @@ void Asample::render(AfBuffer &buffer, const ArenderConfig &config)
         } else { // Up-sampling
 
         }
-#endif
+
         if (move_rate > 1.0)
             fprintf(stderr, "libawe [debug] Proper down-sampling has not been implemented yet.");
+#endif
 
         /****/ if (mSource->getChannelCount() >= 2)
         {

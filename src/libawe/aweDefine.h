@@ -1,5 +1,5 @@
 //  aweDefine.h :: Essential declarations and definitions
-//  Copyright 2012 - 2013 Keigen Shu
+//  Copyright 2012 - 2014 Keigen Shu
 
 #ifndef AWE_DEFINE
 #define AWE_DEFINE
@@ -56,8 +56,8 @@ static const /* constexpr */ Afloat Afloat_96dB = 1.0 / pow(10.0, 4.8);
 /**
  * A single audio frame.
  *
- * A frame is a snapshot of all sound samples to and/or from all channels at
- * a specific time point. This structure is an expansion of the STL array to
+ * A frame is a snapshot of all sound samples on all channels at a specific
+ * time point. This structure is designed as an expansion of the STL array to
  * support array/frame-wide algorithms and arithmetic.
  */
 template< typename T, unsigned char Channels >
@@ -231,16 +231,15 @@ struct ArenderConfig
     } quality;
 
     ArenderConfig(
-            unsigned long sample_rate,
-            unsigned long frame_count,
-            unsigned long frame_offset = 0,
-            renderQuality q = renderQuality::DEFAULT
-            ) :
-        targetSampleRate(sample_rate),
-        targetFrameCount(frame_count),
-        targetFrameOffset(frame_offset),
-        quality(q)
-        { }
+        unsigned long sample_rate,
+        unsigned long frame_count,
+        unsigned long frame_offset = 0,
+        renderQuality q = renderQuality::DEFAULT
+    )   : targetSampleRate(sample_rate)
+        , targetFrameCount(frame_count)
+        , targetFrameOffset(frame_offset)
+        , quality(q)
+    { }
 
 };
 
