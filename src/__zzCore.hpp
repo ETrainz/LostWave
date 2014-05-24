@@ -1,5 +1,5 @@
 /* __zzCore.hpp :: Core application definitions
- * Copyright 2013 Chu Chin Kuan <keigen.shu@gmail.com>
+ * Copyright 2013 - 2014 Chu Chin Kuan <keigen.shu@gmail.com>
  */
 
 #ifndef LOSTWAVE_CORE_DEFINES
@@ -180,6 +180,8 @@ inline clan::Rectx<T> alignRB (const clan::Rectx<T> &area, const clan::Sizex<T> 
 template <typename T>
 inline clan::Rectx<T> alignLT (const clan::Sizex<T> &area, const clan::Sizex<T> &size)
 {
+    (void)area;
+
     T l = 0;
     T r = size.width;
     T u = 0;

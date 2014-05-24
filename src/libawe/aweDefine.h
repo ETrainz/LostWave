@@ -1,5 +1,5 @@
 //  aweDefine.h :: Essential declarations and definitions
-//  Copyright 2012 - 2014 Keigen Shu
+//  Copyright 2012 - 2014 Chu Chin Kuan <keigen.shu@gmail.com>
 
 #ifndef AWE_DEFINE
 #define AWE_DEFINE
@@ -12,20 +12,29 @@
 #include <array>
 #include <queue>
 
+//! \brief The libawe namespace, where everything used by libawe resides in.
 namespace awe {
 
-/* Basic datatypes */
-using Aint   = int16_t;
-using Afloat = float;
+//!@name Standard audio data types
+//!@{
+using Aint   = int16_t; //!< 16-bit integer data type
+using Afloat = float;   //!< Architecture-specific floating point data type
+//!@}
 
-/* FIFO buffer */
-typedef std::queue<Afloat> AfFIFOBuffer;
-typedef std::queue<Aint  > AiFIFOBuffer;
+//!@name Standard audio queue buffers
+//!@{
+typedef std::queue<Aint  > AiFIFOBuffer; //!< Integer audio data queue
+typedef std::queue<Afloat> AfFIFOBuffer; //!< Floating-point audio data queue
+//!@}
 
-#define IO_BUFFER_SIZE  16384   /** File IO buffer size */
+#define IO_BUFFER_SIZE  16384   //!< Default file IO buffer size
 
-/** @return Afloat equivalent of Aint */
-inline const /* constexpr */ Afloat to_Afloat(const Aint &v)
+//!@name Standard data type converters
+//!@{
+
+//! @brief 16-bit bi-polar integer to normalized floating point value casting function.
+//! @return Afloat equivalent of Aint
+inline Afloat to_Afloat(const Aint &v)
 {
     if (v == 0)
         return 0;
@@ -35,8 +44,9 @@ inline const /* constexpr */ Afloat to_Afloat(const Aint &v)
         return float(v) / 32767.0f;
 }
 
-/** @return Aint equivalent of Afloat */
-inline const /* constexpr */ Aint to_Aint(const Afloat &v)
+//! @brief Normalized floating point to 16-bit bi-polar integer value casting function.
+//! @return Aint equivalent of Afloat
+inline Aint to_Aint(const Afloat &v)
 {
     if (v != v) // Abnormal floating point
         return 0;
@@ -45,20 +55,27 @@ inline const /* constexpr */ Aint to_Aint(const Afloat &v)
     else
         return std::min<Aint>(static_cast<int32_t>(v * 32767.0f),  32767);
 }
+//!@}
 
-static const /* constexpr */ Afloat Afloat_limit = 1.0f / 65535.0f;
+//! Converts a normalized linear magnitude value (0.0f - 1.0f) to a full-scale decibel magnitude value
+inline Afloat to_dBFS(const Afloat &v) { return 20.0f * log10(v); }
 
-/** Normalized linear magnitude (0.0f - 1.0f) to full-scale decibel */
-inline const /* constexpr */ Afloat to_dBFS(const Afloat &v) { return 20.0f * log10(v); }
-static const /* constexpr */ Afloat dBFS_limit = to_dBFS(Afloat_limit);
-static const /* constexpr */ Afloat Afloat_96dB = 1.0 / pow(10.0, 4.8);
+//! Smallest unit of representation for a 16-bit integer on a normalized floating point.
+static constexpr Afloat Afloat_limit = 1.0f / 65535.0f;
 
-/**
- * A single audio frame.
+//! Full scale decibel limit (~96 dB).
+static const Afloat dBFS_limit = to_dBFS(Afloat_limit);
+
+
+static const Afloat Afloat_96dB = 1.0 / pow(10.0, 4.8);
+
+/*! Structure holding a single audio frame.
+ *  A frame is a snapshot of all sound samples on all channels at a specific
+ *  time point. This structure is designed as an expansion of the STL array to
+ *  support array/frame-wide algorithms and arithmetic.
  *
- * A frame is a snapshot of all sound samples on all channels at a specific
- * time point. This structure is designed as an expansion of the STL array to
- * support array/frame-wide algorithms and arithmetic.
+ *  @tparam T type of data that this structure will hold.
+ *  @tparam Channels number of channels of data within this single frame.
  */
 template< typename T, unsigned char Channels >
 struct Aframe
@@ -196,11 +213,14 @@ struct Aframe
     }
 };
 
-// Standard libawe frame types
-typedef Aframe<Aint  , 2> Asintf;       /** a stereo Aint frame   */
-typedef Aframe<Afloat, 2> Asfloatf;     /** a stereo Afloat frame */
+//!@name Standard libawe frame types
+//!@{
+typedef Aframe<Aint  , 2> Asintf;       //!< a stereo Aint frame
+typedef Aframe<Afloat, 2> Asfloatf;     //!< a stereo Afloat frame
+//!@}
 
-
+//!@name Standard data type converters
+//!@{
 inline const /* constexpr */ Asfloatf to_Asfloatf(const Asintf &i) {
     return Asfloatf::container_type({ to_Afloat(i[0]), to_Afloat(i[1]) });
 }
@@ -208,33 +228,47 @@ inline const /* constexpr */ Asfloatf to_Asfloatf(const Asintf &i) {
 inline const /* constexpr */ Asintf to_Asintf(const Asfloatf &f) {
     return Asintf  ::container_type({ to_Aint  (f[0]), to_Aint  (f[1]) });
 }
+//!@}
 
-/**
- * General purpose audio rendering configuration structure passed to
- * modules.
+/*! General purpose audio rendering configuration structure passed to modules.
  */
 struct ArenderConfig
 {
-    unsigned long targetSampleRate;     /** Target stream sampling rate */
-    unsigned long targetFrameCount;     /** Number of frames to render onto target buffer. */
-    unsigned long targetFrameOffset;    /** Index on the target buffer to start writing from. */
-    enum class renderQuality : uint8_t  /** Render quality option */
+    /** Render quality option */
+    enum class Quality : uint8_t
     {
+        /** Default rendering configuration */
         DEFAULT  = 0x0,
-
+        /** Fastest rendering option */
         FAST     = 0x1,
+        /** Balanced rendering option */
         MEDIUM   = 0x2,
+        /** Best render quality */
         BEST     = 0x3,
-
+        /** Update renderer without doing anything to the target buffer. */
         MUTE     = 0xE,
+        /** Return immediately without doing anything. */
         SKIP     = 0xF
-    } quality;
+    };
 
+    /** Target stream sampling rate. */
+    unsigned long targetSampleRate;
+
+    /** Number of frames to render onto target buffer. */
+    unsigned long targetFrameCount;
+
+    /** Index on the target buffer to start writing from. */
+    unsigned long targetFrameOffset;
+
+    /** Rendering quality. */
+    Quality quality;
+
+    /** Default constructor. */
     ArenderConfig(
         unsigned long sample_rate,
         unsigned long frame_count,
         unsigned long frame_offset = 0,
-        renderQuality q = renderQuality::DEFAULT
+        Quality q = Quality::DEFAULT
     )   : targetSampleRate(sample_rate)
         , targetFrameCount(frame_count)
         , targetFrameOffset(frame_offset)

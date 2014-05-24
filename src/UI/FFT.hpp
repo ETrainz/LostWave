@@ -1,5 +1,5 @@
 //  UI/FFT.hpp :: FFT visualizer
-//  Copyright 2013 Keigen Shu
+//  Copyright 2013 - 2014 Chu Chin Kuan <keigen.shu@gmail.com>
 
 #ifndef UI_FFT_H
 #define UI_FFT_H
@@ -21,7 +21,8 @@ public:
     {
         HANNING     = 'H',
         LANCZOS     = 'L',
-        RECTANGULAR = 'R'
+        RECTANGULAR = 'R',
+        TRIANGULAR  = 'T'
     };
 
     enum class IEScaleType : uint8_t
@@ -49,7 +50,7 @@ protected:
     float   mScale; // range of values to display (for log scale from 0db to x)
     float   mRange; // number of pixels
 
-    
+
     ////    Class state    /////////////////////////////////
     kiss_fftr_cfg    kCl,  kCr; // KISSFFT config
     kiss_fft_scalar *kIl, *kIr; // input
@@ -60,7 +61,10 @@ protected:
     float               mWindowScale;   // FFT window magnitude adjustment
     awe::AfBuffer       mOutput;        // Squares of the real and imaginary parts of the FFT output
     awe::AfBuffer       mSpectrum;      // Output spectrum values adjusted to scale for drawing
-    
+
+    awe::AfBuffer       mPrevious;      // Half-buffer of previous run.
+    awe::AfBuffer       mVector;        // Spectra direction buffer.
+
     void setBands (ulong);
     void setWindow(IEWindowType);
 
@@ -81,7 +85,8 @@ public:
     void setSampleRate(ulong rate);
 
     void calc_FFT(awe::AfBuffer const &buffer);
-    void update(awe::AfBuffer const &buffer);
+    void update  (awe::AfBuffer const &buffer);
+    void update_2(awe::AfBuffer const &buffer); // Double-buffered update.
 
     ////    GUI Component Callbacks    ////////////////////////////////
     void render(clan::Canvas &canvas, recti const &clip_rect);

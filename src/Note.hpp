@@ -1,5 +1,5 @@
 //  Note.h :: Standard Note objects
-//  Copyright 2013 Keigen Shu
+//  Copyright 2013 - 2014 Chu Chin Kuan <keigen.shu@gmail.com>
 
 #ifndef NOTE_H
 #define NOTE_H
@@ -57,9 +57,9 @@ public:
         float vol = 1.0f, float pan = 0.0f
     ) : Note(key, bTime),
         mBTime (bTime)   , mETime (eTime),
-        mBTick (0)       , mETick (0),
         mBSID  (bSID)    , mESID  (eSID),
         mVol   (vol)     , mPan   (pan),
+        mBTick (0)       , mETick (0),
         mBScore(JScore()), mEScore(JScore()),
         mHasEndPoint(true)
     { }
@@ -71,9 +71,9 @@ public:
         float vol = 1.0f, float pan = 0.0f
     ) : Note(key, time),
         mBTime (time)    , mETime (time),
-        mBTick (0)       , mETick (0),
         mBSID  (sampleID), mESID  (sampleID),
         mVol   (vol)     , mPan   (pan),
+        mBTick (0)       , mETick (0),
         mBScore(JScore()), mEScore(JScore()),
         mHasEndPoint(false)
     { }
@@ -84,9 +84,9 @@ public:
         float vol = 1.0f, float pan = 0.0f
     ) : Note(begin.getKey(), begin.getTime()),
         mBTime (begin.getTime())    , mETime (end.getTime()),
-        mBTick (0)       , mETick (0),
         mBSID  (begin.getSampleID()), mESID  (end.getSampleID()),
         mVol   (vol)     , mPan   (pan),
+        mBTick (0)       , mETick (0),
         mBScore(JScore()), mEScore(JScore()),
         mHasEndPoint(true)
     { }

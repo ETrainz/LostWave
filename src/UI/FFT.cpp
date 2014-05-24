@@ -2,9 +2,9 @@
 
 namespace UI {
 
-inline const /* constexpr */ double _sinc(double const &x) { return sin(M_PI * x) / (M_PI * x); }
-static const /* constexpr */ double _lanczos_size = 3.0f;
-inline const /* constexpr */ double _lanczos_sinc(double const &x)
+inline constexpr double _sinc(double const &x) { return sin(M_PI * x) / (M_PI * x); }
+static constexpr double _lanczos_size = 3.0f;
+inline constexpr double _lanczos_sinc(double const &x)
 {
     return
         (x == 0.0)          ? 1.0 : (
@@ -34,6 +34,13 @@ std::vector<float> FFT::generate_window(FFT::IEWindowType const &type, ulong con
             for(ulong t = 0; t < size; ++t)
                 window[t] = 1.0f;
             break;
+
+        case FFT::IEWindowType::TRIANGULAR:
+            for(ulong t = 0; t < size / 2; ++t)
+                window[t           ] =       static_cast<double>(2 * t) / static_cast<double>(size - 1),
+                window[t + size / 2] = 1.0 - static_cast<double>(2 * t) / static_cast<double>(size - 1);
+            break;
+
     }
 
     return window;
@@ -58,6 +65,8 @@ FFT::FFT(
     , mRange        (-awe::dBFS_limit / mScale)
     , mOutput       (2, mFrames)
     , mSpectrum     (2, 0)
+    , mPrevious     (2, mFrames)
+    , mVector       (1, mFrames)
 {
     set_geometry(area);
 
@@ -155,7 +164,6 @@ void FFT::calc_FFT(const awe::AfBuffer& buffer)
 
         mOutput.data()[t*2  ] = rl*rl + il*il;
         mOutput.data()[t*2+1] = rr*rr + ir*ir;
-
     }
 }
 
@@ -178,10 +186,13 @@ void FFT::update(awe::AfBuffer const& buffer)
         awe::Asfloatf n({ 0.0f, 0.0f });
         awe::Asfloatf o(mSpectrum.getFrame(i));
 
-        if (b < a) {
+        /* Transform frequency axis from linear scale to logarithmic scale */
+
+        // where x = 0 .. b
+        if (b < a) { // log(x) / log(b) < 1.0;
             n[0] += mOutput.getSample(b*2  ) * (mBandX[i+1] - mBandX[i]),
             n[1] += mOutput.getSample(b*2+1) * (mBandX[i+1] - mBandX[i]);
-        } else {
+        } else {     // log(x) / log(b) > 1.0;
             if (a > 0)
                 n[0] += mOutput.getSample(c*2  ) * (a - mBandX[i]),
                 n[1] += mOutput.getSample(c*2+1) * (a - mBandX[i]);
@@ -195,6 +206,7 @@ void FFT::update(awe::AfBuffer const& buffer)
                 n[1] += mOutput.getSample(b*2+1) * (mBandX[i+1] - b);
         }
 
+        /* Apply magnitude scaling on spectra value. */
         switch (mScaleType)
         {
             case FFT::IEScaleType::DBFS:
@@ -215,12 +227,15 @@ void FFT::update(awe::AfBuffer const& buffer)
                 break;
         }
 
+        // Apply peaking and decay on Old Peak
         o[0] -= mRange * mDecay,
         o[1] -= mRange * mDecay;
 
+        // Old Peak value clipping
         o[0] = o[0] > 0.0f ? o[0] : 0.0f,
         o[1] = o[1] > 0.0f ? o[1] : 0.0f;
 
+        // Use New Peak if it is louder
         n[0] = n[0] > o[0] ? n[0] : o[0],
         n[1] = n[1] > o[1] ? n[1] : o[1];
 
@@ -228,6 +243,22 @@ void FFT::update(awe::AfBuffer const& buffer)
     }
 }
 
+void FFT::update_2(awe::AfBuffer const &buffer) {
+    auto pvec = mPrevious.vector();
+    auto nvec = buffer.cvector();
+
+    uint s = buffer.getSampleCount() / 2;
+
+    std::copy(pvec.cbegin() + s, pvec.cend(), pvec.begin());
+    std::copy(nvec.cbegin(), nvec.cbegin() + s, pvec.begin() + s);
+
+    update(mPrevious);
+    update(buffer);
+
+    mPrevious = buffer;
+
+    request_repaint();
+}
 
 ////    GUI Component Callbacks    ////////////////////////////////////
 void FFT::render(clan::Canvas &canvas, recti const &clip_rect)
@@ -269,12 +300,23 @@ void FFT::render(clan::Canvas &canvas, recti const &clip_rect)
     for(ulong i = 0; i < mBands; ++i)
     {
         color.h += inc;
+
         rectf out {
             midpt - mSpectrum.getSample(i*2  ), bandw * (mBands-i  ),
             midpt + mSpectrum.getSample(i*2+1), bandw * (mBands-i+1)
         };
 
         canvas.fill_rect(out, color);
+
+        const float vec = 4.0f * ( mSpectrum.getSample(i*2+1) - mSpectrum.getSample(i*2  ) );
+        canvas.fill_triangle(
+                point2f{ midpt + mVector.get0Sample(i+1), bandw * (mBands-i+2) },
+                point2f{ midpt + mVector.get0Sample(i  ), bandw * (mBands-i+1) },
+                point2f{ midpt + vec                    , bandw * (mBands-i  ) },
+                clan::Colorf { 1.0f, 1.0f, 1.0f, 0.2f }
+                );
+
+        mVector.vector()[i] = vec;
     }
 }
 

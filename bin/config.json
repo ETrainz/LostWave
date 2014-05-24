@@ -10,7 +10,8 @@
         "frame-rate": 512,
         "fft": {
             "bars": 512,
-            "fade": 2
+            "fade": 2,
+            "window": "Hanning"
         }
     },
     "gui": {

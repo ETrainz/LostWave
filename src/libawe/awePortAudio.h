@@ -1,5 +1,5 @@
 //  awePortAudio.h :: Sound output to device via PortAudio
-//  Copyright 2012 - 2013 Keigen Shu
+//  Copyright 2012 - 2014 Chu Chin Kuan <keigen.shu@gmail.com>
 
 #ifndef AWE_PORTAUDIO_H
 #define AWE_PORTAUDIO_H
@@ -11,19 +11,21 @@
 
 namespace awe {
 
-/** PortAudio class to handle communication with audio device.
+/*! PortAudio class to handle communication with the audio device.
  */
 class APortAudio
 {
 public:
-    struct PaCallbackPacket {
-        std::mutex  *   mutex;      //! Output FIFO buffer mutex
-        AfFIFOBuffer*   output;     //! Output FIFO buffer
-        unsigned char   calls;      //! Number of times PA ran this callback since last update.
-        unsigned char   underflows; //! Number of times PA reported underflow problems since last update.
+    //! PortAudio callback data structure.
+    struct PaCallbackPacket
+    {
+        std::mutex  *   mutex;      //<! Output FIFO buffer mutex.
+        AfFIFOBuffer*   output;     //<! Output FIFO buffer pointer.
+        unsigned char   calls;      //<! Number of times PA ran this callback since last update.
+        unsigned char   underflows; //<! Number of times PA reported underflow problems since last update.
     };
 
-    /** Host API type enumerator */
+    //! PortAudio audio output host API enumerator
     enum class HostAPIType : int {
         Default = 0, // paInDevelopment
         DS      = paDirectSound,

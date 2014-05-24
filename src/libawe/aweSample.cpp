@@ -1,5 +1,5 @@
 //  aweSample.cpp :: Sound sample class
-//  Copyright 2012 - 2014 Keigen Shu
+//  Copyright 2012 - 2014 Chu Chin Kuan <keigen.shu@gmail.com>
 
 #include "aweSample.h"
 
@@ -37,12 +37,12 @@ void Asample::render(AfBuffer &buffer, const ArenderConfig &config)
 
     switch(config.quality)
     {
-        case ArenderConfig::renderQuality::MUTE:
+        case ArenderConfig::Quality::MUTE:
             mLoop += config.targetFrameCount * move_rate;
-        case ArenderConfig::renderQuality::SKIP:
+        case ArenderConfig::Quality::SKIP:
             return;
 
-        case ArenderConfig::renderQuality::FAST:
+        case ArenderConfig::Quality::FAST:
             /****/ if (mSource->getChannelCount() >= 2)
             {
                 for(size_t i = config.targetFrameOffset; i < config.targetFrameOffset + config.targetFrameCount; i++)
@@ -65,7 +65,7 @@ void Asample::render(AfBuffer &buffer, const ArenderConfig &config)
         default:
             break;
     }
-    if (config.quality == ArenderConfig::renderQuality::MEDIUM
+    if (config.quality == ArenderConfig::Quality::MEDIUM
         || mSampleRate == config.targetSampleRate
     ) {
         /****/ if (mSource->getChannelCount() >= 2)

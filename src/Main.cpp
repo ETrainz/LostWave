@@ -58,9 +58,9 @@ static void autoVisualize(AudioManager* am, UI::FFT* FFTbg, UI::FFT* FFTp1, UI::
             ulong new_count = am->getUpdateCount();
             if (new_count != count)
             {
-                FFTbg->update(am->getMasterTrack().getOutput());
-                FFTp1->update(am->getTrackMap()->at(1)->getOutput());
-                FFTp2->update(am->getTrackMap()->at(2)->getOutput());
+                FFTbg->update_2(am->getMasterTrack().getOutput());
+                FFTp1->update_2(am->getTrackMap()->at(1)->getOutput());
+                FFTp2->update_2(am->getTrackMap()->at(2)->getOutput());
                 timer->set(new_count - count);
                 count = new_count;
             }
@@ -87,9 +87,8 @@ int App::main(std::vector<std::string> const &args)
 
     try {
         JSONFile config("config.json");
-        debug = config.get_if_else_set(
-                &JSONReader::getBoolean, "debug", false,
-                [](bool const &value) -> bool {}
+        debug = config.get_or_set(
+                &JSONReader::getBoolean, "debug", false
                 );
 
         sizei resolution = config.get_if_else_set(
@@ -122,27 +121,45 @@ int App::main(std::vector<std::string> const &args)
                 [] (double const &value) -> bool { return value > 0.0; }
                 );
 
+            std::string fftw = config.get_if_else_set(
+                &JSONReader::getString, "audio.fft.window", std::string("Hanning"),
+                [] (std::string const &value) -> bool {
+                    std::string str;
+                    std::transform(value.begin(), value.end(), str.begin(), ::tolower);
+                    if (str.compare("hanning"    ) == 0) return true;
+                    if (str.compare("lanczos"    ) == 0) return true;
+                    if (str.compare("rectangular") == 0) return true;
+                    if (str.compare("triangular" ) == 0) return true;
+                    return false;
+                });
+
+            UI::FFT::IEWindowType FFTwindow
+                    = (fftw.compare("lanczos"    ) == 0)
+                    ?   UI::FFT::IEWindowType::LANCZOS
+                    : (fftw.compare("rectangular") == 0)
+                    ?   UI::FFT::IEWindowType::RECTANGULAR
+                    : (fftw.compare("triangular" ) == 0)
+                    ?   UI::FFT::IEWindowType::TRIANGULAR
+                    :   UI::FFT::IEWindowType::HANNING
+                    ;
+
             UI::FFT* FFTbg = new UI::FFT(game, game->get_geometry(),
                     game->am.getMasterTrack().getConfig().targetFrameCount,
                     game->am.getMasterTrack().getConfig().targetSampleRate,
-                    FFTbars, FFTfade
+                    FFTbars, FFTfade, FFTwindow
                     );
             UI::FFT* FFTp1 = new UI::FFT(game, game->get_geometry(),
                     game->am.getMasterTrack().getConfig().targetFrameCount,
                     game->am.getMasterTrack().getConfig().targetSampleRate,
-                    FFTbars, FFTfade
+                    FFTbars, FFTfade, FFTwindow
                     );
             UI::FFT* FFTp2 = new UI::FFT(game, game->get_geometry(),
                     game->am.getMasterTrack().getConfig().targetFrameCount,
                     game->am.getMasterTrack().getConfig().targetSampleRate,
-                    FFTbars, FFTfade
+                    FFTbars, FFTfade, FFTwindow
                     );
 
             UI::Timer* timer = new UI::Timer(game, {1.0f, 0.8f, 0.0f, 0.6f}, {1.0f, 1.0f, 0.0f, 0.8f});
-
-            FFTbg->set_constant_repaint(true);
-            FFTp1->set_constant_repaint(true);
-            FFTp2->set_constant_repaint(true);
 
             AudioTrack* ATPM = new AudioTrack(&game->am.getMasterTrack()   , game, point2i{ 200,0 });
             AudioTrack* ATP0 = new AudioTrack(game->am.getTrackMap()->at(0), game, point2i{ 250,0 });
