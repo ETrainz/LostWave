@@ -2,7 +2,7 @@
 
 ////    GUI consts    /////////////////////////////////////////////////
 constexpr int   kPadding    = 4     , kmPadding     = 2;
-constexpr int   kWidth      = 40    , kmWidth       = 8;
+constexpr int   kWidth      = 40    , kmWidth       = 12;
 
 constexpr int   kSliderWidth    = 2 * kPadding + 1;
 
@@ -23,9 +23,11 @@ const sizei kMeterSize      = { kPadding - 1 , 120 };   // Single meter
 constexpr int   kMarkerWidth    = kPadding;
 const sizei kFaderSize      = {(kWidth - 3 * kPadding) / 3, 120 + 2 * kPadding };
 
+const sizei kButtonSize     = {(kWidth - 3 * kPadding) / 2, kPadding * 2 };
+
 const sizei kSize           = {
     kWidth,
-    kEQGainSize.height + kEQFreqSize.height + kPanSize.height + kMeterSize.height + 9 * kPadding
+    kEQGainSize.height + kEQFreqSize.height + kPanSize.height + kMeterSize.height + kButtonSize.height * 2 + 9 * kPadding
 };
 
 const point2i   koEQGain    = { kPadding, kPadding };
@@ -33,9 +35,16 @@ const point2i   koEQFreq    = { kPadding, koEQGain.y + kEQGainSize.height + kPad
 const int       kySplit     = koEQFreq.y + kEQFreqSize.height + kPadding * 2;
 const point2i   koPan       = { kPadding, kPadding + kySplit };
 const point2i   koMeter     = { kPadding, koPan.y + kPanSize.height + kPadding };
+const point2i   koButton    = { kPadding, koMeter.y + kFaderSize.height + kPadding };
 
-const sizei     kmMeterSize     = { kmPadding, 120 };   // Single meter on mini mode
+////    Mini Mode
+const sizei     kmMeterSize     = { kmPadding, 120 };
+const sizei     kmButtonSize    = { kmWidth - 2 * kmPadding, kmWidth - kmPadding * 2 };
 
+const sizei     kmSize      = { kmWidth, kmMeterSize.height + kmButtonSize.height * 2 + kmPadding * 5 };
+
+const point2i   kmoMeter    = { kmPadding, kmPadding };
+const point2i   kmoButton   = { kmPadding, kmoMeter.y + kmMeterSize.height + kmPadding * 2 };
 
 ////    AudioTrack class    ///////////////////////////////////////////
 AudioTrack::AudioTrack(
@@ -65,6 +74,9 @@ AudioTrack::AudioTrack(
 
     , mGCsdvGain(this)
     , mGCsdhPan (this)
+
+    , mGCbtnMute(this)
+    , mGCbtnToggleSize(this)
 {
     set_geometry(recti{pos, kSize});
 
@@ -152,6 +164,18 @@ AudioTrack::AudioTrack(
 
     mGCsdvGain.set_focus_policy(focus_parent);
 
+    ////    MUTE and TOGGLE MINI MODE BUTTONS    ////
+    this->size_toggled(false);
+
+    mGCbtnMute.mcBackground[1] = { 1.0f, 0.6f, 0.6f }; // Red illumination when pressed
+    mGCbtnMute.mcBackground[3] = { 1.0f, 0.8f, 1.0f };
+    mGCbtnMute.mcBackground[4] = { 1.0f, 0.4f, 0.6f };
+
+    mGCbtnMute      .func_toggled().set(this, &AudioTrack::mute_toggled);
+    mGCbtnToggleSize.func_toggled().set(this, &AudioTrack::size_toggled);
+
+    mGCbtnMute      .set_focus_policy(focus_parent);
+    mGCbtnToggleSize.set_focus_policy(focus_parent);
 
     func_render().set(this, &AudioTrack::render);
     set_constant_repaint(true);
@@ -169,10 +193,7 @@ AudioTrack::~AudioTrack() {
 ////    GUI Component Methods    //////////////////////////////////
 void AudioTrack::render(clan::Canvas &canvas, const recti &clip_rect)
 {
-    double eqLG, eqMG, eqHG;    // Band gain
-    double eqLF, eqHF;          // Band window
-
-    float mxVol, mxPan;
+    float mxVol;
 
     awe::Asintf mtPeak;
     awe::Asintf mtRMS;
@@ -180,14 +201,12 @@ void AudioTrack::render(clan::Canvas &canvas, const recti &clip_rect)
     float mScale = 2.0f; // 0 ~ -48dB... at 2px/dB. See UI/FFT.hpp
     float mRange = -awe::dBFS_limit / mScale;
 
-    {
+    {   //  Calculate metering
         awe::Asfloatf mtPeakf, mtRMSf;
 
         std::lock_guard<std::mutex> o_lock(mTrack->getMutex());
-        m3BEQ->get_freq(eqLF, eqHF);
-        m3BEQ->get_gain(eqLG, eqMG, eqHG);
-        mxVol  = mMixer->getVol();
-        mxPan  = mMixer->getPan();
+
+        mxVol = mMixer->getVol() * 96.0f;
 
         mtPeakf = mMeter->getPeak();
         mtRMSf  = mMeter->getAvgRMS();
@@ -209,14 +228,90 @@ void AudioTrack::render(clan::Canvas &canvas, const recti &clip_rect)
 
     ////    DRAW    ///////////////////////////////////////////////////
 
-    //  Component background and split line
+    //  Component background
     canvas.fill_rect( recti(0, 0, get_size()), clan::Colorf::white );
+
+    //  Mini mode
+    if (this->mGCbtnToggleSize.isOn())
+    {
+        //  Meter Background
+        canvas.fill_rect(
+                recti(kmoMeter, sizei(
+                    kmWidth             - 2 * kmPadding,
+                    kMeterSize.height   + 1 * kmPadding
+                )),
+                clan::Colorf::black
+                );
+
+        canvas.draw_line(
+                          kmoMeter.x, kmoMeter.y + 1 + mxVol,
+                kmWidth - kmoMeter.x, kmoMeter.y + 1 + mxVol,
+                clan::Colorf{ 0.0f, 1.0f, 1.0f, 0.6f }
+                );
+        canvas.draw_line(
+                kmWidth - kmoMeter.x - 1, kmoMeter.y + 1 + mxVol,
+                kmWidth - kmoMeter.x - 1, kmoMeter.y + 2 + mxVol,
+                clan::Colorf{ 0.0f, 1.0f, 1.0f, 0.6f }
+                );
+        canvas.draw_line(
+                kmWidth - kmoMeter.x, kmoMeter.y + 1 + mxVol,
+                kmWidth - kmoMeter.x, kmoMeter.y + 3 + mxVol,
+                clan::Colorf{ 0.0f, 1.0f, 1.0f, 0.6f }
+                );
+
+        //  Meter Bars
+        {
+            const int oT = kmoMeter.y + 1;
+
+            const int  w = kmMeterSize.width;
+            const int oL = kmoMeter.x + 1;
+            const int oR = oL + w + 1;
+
+            auto get_color = [] (awe::Aint const &x) -> clan::Colorf {
+                if (x < 64)
+                    return clan::Colorf::green;
+                if (x < 96)
+                    return clan::Colorf::orange;
+
+                return clan::Colorf::red;
+            };
+
+            for(awe::Aint p = 0; p < 120; p += w+1)
+            {
+                clan::Colorf cRMS  = get_color(p);
+                clan::Colorf cPeak = { cRMS.r * 0.6f, cRMS.g * 0.6f, cRMS.b * 0.6f };
+                clan::Colorf cNone = { 0.1f, 0.1f, 0.1f };
+
+                /**/ if (mtRMS [0] > p)
+                    canvas.fill_rect(oL, oT+p, oL+w, oT+p+w, cRMS);
+                else if (mtPeak[0] > p)
+                    canvas.fill_rect(oL, oT+p, oL+w, oT+p+w, cPeak);
+                else
+                    canvas.fill_rect(oL, oT+p, oL+w, oT+p+w, cNone);
+
+                /**/ if (mtRMS [1] > p)
+                    canvas.fill_rect(oR, oT+p, oR+w, oT+p+w, cRMS);
+                else if (mtPeak[1] > p)
+                    canvas.fill_rect(oR, oT+p, oR+w, oT+p+w, cPeak);
+                else
+                    canvas.fill_rect(oR, oT+p, oR+w, oT+p+w, cNone);
+            }
+
+            // TODO Implement audio overclip indicator
+        }
+
+        return;
+    }
+
+    //  Large mode
+
+    //  Draw component split line
     canvas.draw_line( 1, kySplit, get_width() - 1, kySplit, { 0.8f, 0.8f, 0.8f } );
 
     //  Meter Background
     canvas.fill_rect(
             recti(
-                kPadding, koMeter.y,
+                koMeter,
                 sizei(
                     2 * kPadding + 2 * kMeterSize.width + 1,
                     2 * kPadding + kMeterSize.height
@@ -224,11 +319,18 @@ void AudioTrack::render(clan::Canvas &canvas, const recti &clip_rect)
             clan::Colorf::black
             );
 
+    //  Gain line
+    canvas.draw_line(
+            koMeter.x + kmPadding                                      , koMeter.y + kPadding + mxVol,
+            koMeter.x + kmPadding + kPadding + kMeterSize.width * 2 + 1, koMeter.y + kPadding + mxVol,
+            clan::Colorf{ 0.0f, 1.0f, 1.0f, 0.6f }
+            );
+
     //  Meter Bars
     {
         const int oT = kPadding + koMeter.y;
 
-        const int w = kMeterSize.width;
+        const int w  = kMeterSize.width;
         const int oL = koMeter.x + kPadding;
         const int oR = oL + w + 1;
 
@@ -244,8 +346,8 @@ void AudioTrack::render(clan::Canvas &canvas, const recti &clip_rect)
         for(awe::Aint p = 0; p < 120; p += w+1)
         {
             clan::Colorf cRMS  = get_color(p);
-            clan::Colorf cPeak = cRMS; cPeak.a = 0.6f;
-            clan::Colorf cNone = clan::Colorf::white; cNone.a = 0.1f;
+            clan::Colorf cPeak = { cRMS.r * 0.6f, cRMS.g * 0.6f, cRMS.b * 0.6f };
+            clan::Colorf cNone = { 0.1f, 0.1f, 0.1f };
 
             /**/ if (mtRMS [0] > p)
                 canvas.fill_rect(oL, oT+p, oL+w, oT+p+w, cRMS);
@@ -271,7 +373,7 @@ void AudioTrack::render(clan::Canvas &canvas, const recti &clip_rect)
         int o = 4 * kPadding + 2 * kMeterSize.width + 1;
         int t = 1 + koMeter.y + kPadding;
 
-        for(int i = t; i < get_height(); i += 16)
+        for(int i = t; i < t + kMeterSize.height; i += 16)
             canvas.draw_line(
                     o               , i,
                     o + kMarkerWidth, i,
@@ -312,4 +414,38 @@ void AudioTrack::mixer_value_changed()
 
     mMixer->setPan(x);
     mMixer->setVol(y);
+}
+
+void AudioTrack::mute_toggled(bool mute)
+{
+    clan::Console::write_line("Toggling to %1", mute ? "MUTE" : "UNMUTE");
+    awe::ArenderConfig config = mTrack->getConfig();
+    config.quality = mute ? awe::ArenderConfig::Quality::MUTE : awe::ArenderConfig::Quality::DEFAULT;
+    mTrack->setConfig(config);
+}
+
+void AudioTrack::size_toggled(bool mini)
+{
+    //  Toggle controller visibility
+    mGCsdvEQGainL.set_visible(!mini);
+    mGCsdvEQGainM.set_visible(!mini);
+    mGCsdvEQGainH.set_visible(!mini);
+    mGCsdhEQFreqL.set_visible(!mini);
+    mGCsdhEQFreqH.set_visible(!mini);
+
+    mGCsdhPan .set_visible(!mini);
+    mGCsdvGain.set_visible(!mini);
+
+    // Resize elements
+    if (mini) {
+        set_geometry(recti{ get_geometry().get_top_left(), kmSize });
+
+        mGCbtnMute      .set_geometry(recti{ kmoButton, kmButtonSize });
+        mGCbtnToggleSize.set_geometry(recti{ kmoButton.x, kmoButton.y + kmButtonSize.height + kmPadding, kmButtonSize });
+    } else {
+        set_geometry(recti{ get_geometry().get_top_left(), kSize });
+
+        mGCbtnMute      .set_geometry({ koButton, kButtonSize });
+        mGCbtnToggleSize.set_geometry({ get_width() - kPadding - kButtonSize.width, koButton.y, kButtonSize });
+    }
 }

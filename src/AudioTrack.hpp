@@ -11,6 +11,7 @@
 #include "libawe/Filters/Mixer.h"
 #include "libawe/Filters/Metering.h"
 #include "UI/Slider.hpp"
+#include "UI/SwitchButton.hpp"
 
 /* Margin 1px; Padding 2px;
  */
@@ -33,10 +34,9 @@ private:
 
     UI::Slider                  mGCsdvGain;
     UI::Slider                  mGCsdhPan;
-    /*
-    clan::Button                mGCbtnMute;
-    clan::Button                mGCbtnToggleSize;
-    */
+
+    UI::SwitchButton            mGCbtnMute;
+    UI::SwitchButton            mGCbtnToggleSize;
 
 public:
     AudioTrack(
@@ -54,6 +54,9 @@ public:
     void eq_freq_changed();
 
     void mixer_value_changed();
+
+    void mute_toggled(bool);
+    void size_toggled(bool);
 };
 
 
