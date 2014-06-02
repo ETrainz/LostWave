@@ -24,8 +24,8 @@ class JSONReader
 protected:
     clan::JsonValue   mRoot;
 
-    static clan::JsonValue       & getJsonValue(std::string const &path, clan::JsonValue       & root);
-    static clan::JsonValue const & getJsonValue(std::string const &path, clan::JsonValue const & root);
+    static clan::JsonValue       &  getJsonValue(std::string const &path, clan::JsonValue       & root);
+    static clan::JsonValue const & cgetJsonValue(std::string const &path, clan::JsonValue const & root);
 
 public:
     JSONReader();

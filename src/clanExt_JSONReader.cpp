@@ -19,46 +19,91 @@ JSONReader::JSONReader(clan::JsonValue const &root) : mRoot(root) { }
 
 clan::JsonValue& JSONReader::getJsonValue(std::string const &path, clan::JsonValue& root)
 {
-    if (path.empty())
-        return root;
+    if (path.empty()) return root;
 
-    auto end = path.find_first_of('.');
-    std::string part = path.substr(0, end);
-    auto node = root.get_members().find(part);
-    if (node == root.get_members().cend())
-        throw std::out_of_range("Could not find member '" + part + "'");
+    auto const end = path.find_first_of('.');
+    auto const ind = path.find_first_of('[');
 
-    // TODO Parse JSON arrays
-    // TODO Create JSON nodes for path if it doesn't exist
+    bool has_dot   = end != std::string::npos;
+    bool has_array = ind != std::string::npos;
 
-    if (end != std::string::npos)
-        return getJsonValue(path.substr(end + 1, std::string::npos), node->second);
-    else
-        return node->second;
+    bool parse_array = has_array && (has_dot ? (ind < end) : true);
+
+    // Get member with the `part' identifer
+    std::string parsed_part = path.substr(0, end);
+    std::string member_part = path.substr(0, parse_array ? ind : end);
+    auto node = root.get_members().find(member_part);
+    if (node == root.get_members().end())
+        throw std::out_of_range("Could not find member '" + member_part + "'");
+
+    if (parse_array)
+    {
+        if (node->second.is_array() == false)
+            throw new clan::JsonException("Member '" + member_part + "' is not an array.");
+
+        auto ind_end = parsed_part.find_first_of(']');
+        if (ind_end == std::string::npos)
+            throw new clan::JsonException("Expected closing bracket ']' in '" + parsed_part + "'.");
+
+        if (ind_end <= ind)
+            throw new clan::JsonException("Unexpected ']' in '" + parsed_part + "'.");
+
+        std::string ind_part = parsed_part.substr(ind + 1, ind_end - 2);
+        if (ind_part.empty())
+            throw new clan::JsonException("Index enumerator in '" + parsed_part + "' is empty.");
+
+        auto member = (node->second.get_items())[std::stoul(ind_part)];
+        return has_dot ? getJsonValue(path.substr(end + 1), member) : member;
+    }
+
+    return has_dot ? getJsonValue(path.substr(end + 1), node->second) : node->second;
 }
 
-clan::JsonValue const & JSONReader::getJsonValue(std::string const &path, clan::JsonValue const &root)
+clan::JsonValue const & JSONReader::cgetJsonValue(std::string const &path, clan::JsonValue const &root)
 {
-    if (path.empty())
-        return root;
+    if (path.empty()) return root;
 
-    auto end = path.find_first_of('.');
-    std::string part = path.substr(0, end);
-    auto node = root.get_members().find(part);
+    auto const end = path.find_first_of('.');
+    auto const ind = path.find_first_of('[');
+
+    bool has_dot   = end != std::string::npos;
+    bool has_array = ind != std::string::npos;
+
+    bool parse_array = has_array && (has_dot ? (ind < end) : true);
+
+    // Get member with the `part' identifer
+    std::string parsed_part = path.substr(0, end);
+    std::string member_part = path.substr(0, parse_array ? ind : end);
+    auto const node = root.get_members().find(member_part);
     if (node == root.get_members().cend())
-        throw std::out_of_range("Could not find member '" + part + "'");
+        throw std::out_of_range("Could not find member '" + member_part + "'");
 
-    // TODO Parse JSON arrays
+    if (parse_array)
+    {
+        if (node->second.is_array() == false)
+            throw new clan::JsonException("Member '" + member_part + "' is not an array.");
 
-    if (end != std::string::npos)
-        return getJsonValue(path.substr(end + 1, std::string::npos), node->second);
-    else
-        return node->second;
+        auto ind_end = parsed_part.find_first_of(']');
+        if (ind_end == std::string::npos)
+            throw new clan::JsonException("Expected closing bracket ']' in '" + parsed_part + "'.");
+
+        if (ind_end <= ind)
+            throw new clan::JsonException("Unexpected ']' in '" + parsed_part + "'.");
+
+        std::string ind_part = parsed_part.substr(ind + 1, ind_end - 2);
+        if (ind_part.empty())
+            throw new clan::JsonException("Index enumerator in '" + parsed_part + "' is empty.");
+
+        auto const member = (node->second.get_items())[std::stoul(ind_part)];
+        return has_dot ? cgetJsonValue(path.substr(end + 1), member) : member;
+    }
+
+    return has_dot ? cgetJsonValue(path.substr(end + 1), node->second) : node->second;
 }
 
 clan::Color JSONReader::getColor(std::string const &path) const
 {
-    clan::JsonValue const &json = getJsonValue(path, mRoot);
+    clan::JsonValue const &json = cgetJsonValue(path, mRoot);
 
     if (json.is_string())
         // First form
@@ -113,7 +158,7 @@ clan::Color JSONReader::getColor(std::string const &path) const
 
 clan::Vec2f JSONReader::getVec2f(std::string const &path) const
 {
-    clan::JsonValue const &json = getJsonValue(path, mRoot);
+    clan::JsonValue const &json = cgetJsonValue(path, mRoot);
 
     if (json.is_array())
     {
@@ -131,7 +176,7 @@ clan::Vec2f JSONReader::getVec2f(std::string const &path) const
 
 clan::Vec2i JSONReader::getVec2i(std::string const &path) const
 {
-    clan::JsonValue const &json = getJsonValue(path, mRoot);
+    clan::JsonValue const &json = cgetJsonValue(path, mRoot);
 
     if (json.is_array())
     {
@@ -149,7 +194,7 @@ clan::Vec2i JSONReader::getVec2i(std::string const &path) const
 
 clan::Rectf JSONReader::getRectf(std::string const &path) const
 {
-    clan::JsonValue const &json = getJsonValue(path, mRoot);
+    clan::JsonValue const &json = cgetJsonValue(path, mRoot);
 
     if (json.is_array())
     {
@@ -185,7 +230,7 @@ clan::Rectf JSONReader::getRectf(std::string const &path) const
 
 clan::Rect JSONReader::getRecti(std::string const &path) const
 {
-    clan::JsonValue const &json = getJsonValue(path, mRoot);
+    clan::JsonValue const &json = cgetJsonValue(path, mRoot);
 
     if (json.is_array())
     {
@@ -225,7 +270,7 @@ clan::FontDescription JSONReader::getFontDesc(std::string const &path) const
 
     font_desc.set_subpixel(false);
 
-    clan::JsonValue const &json = getJsonValue(path, mRoot);
+    clan::JsonValue const &json = cgetJsonValue(path, mRoot);
     if (json.is_object())
     {
         for(auto node: json.get_members())
@@ -300,22 +345,22 @@ clan::FontDescription JSONReader::getFontDesc(std::string const &path) const
 
 double JSONReader::getDecimal(std::string const &path) const
 {
-    return getJsonValue(path, mRoot).to_double();
+    return cgetJsonValue(path, mRoot).to_double();
 }
 
 int JSONReader::getInteger(std::string const &path) const
 {
-    return getJsonValue(path, mRoot).to_int();
+    return cgetJsonValue(path, mRoot).to_int();
 }
 
 bool JSONReader::getBoolean(std::string const &path) const
 {
-    return getJsonValue(path, mRoot).to_boolean();
+    return cgetJsonValue(path, mRoot).to_boolean();
 }
 
 std::string JSONReader::getString(std::string const &path) const
 {
-    return getJsonValue(path, mRoot).to_string();
+    return cgetJsonValue(path, mRoot).to_string();
 }
 
 
