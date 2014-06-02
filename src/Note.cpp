@@ -189,7 +189,7 @@ void Note_Long::update(UI::Tracker const &tracker, KeyStatus const &stat)
 
     //// WAIT -> Starting point not hit yet. Respond to key status.
     //// LIVE -> Starting point hit, but end point hasn't. Respond to key status.
-    //// DONE -> Note::score is set, but not dead to render graphics.
+    //// DONE -> Note::score is set, but not dead as we still need to render graphics.
     //// DEAD -> Note::dead  is set.
     //// TODO Make this prettier and less redundant.
     switch(stat)
@@ -224,8 +224,8 @@ void Note_Long::update(UI::Tracker const &tracker, KeyStatus const &stat)
                     }
                 } else if (mBScore.rank == EJRank::MISS
                         || mBScore.rank == EJRank::AUTO) {      // Missed starting point
-                    mEScore = mBScore;                  // This should not be needed, but someone kept forgetting to set e_temp somewhere.
-                    calc_score();                   // [????]
+                    mEScore = mBScore;                  // This should not be needed, but someone kept forgetting to set mEScore somewhere.
+                    calc_score();
                     return;
                 } else {                                        // Unscored starting point
                     if (b_temp.rank == EJRank::MISS) {  // [DONE] Missed starting point.
@@ -242,7 +242,7 @@ void Note_Long::update(UI::Tracker const &tracker, KeyStatus const &stat)
             break;
 
         case KeyStatus::OFF : // Have not hit anything OR released key.
-            if (mBScore.rank == EJRank::NONE) {      // Unscored starting point; not active yet.
+            if (mBScore.rank == EJRank::NONE) {     // Unscored starting point; not active yet.
                 if (b_temp.rank == EJRank::MISS) {  // [DONE] Missed starting point.
                     mBScore = b_temp;
                     mEScore = b_temp;
@@ -286,6 +286,12 @@ void Note_Long::update(UI::Tracker const &tracker, KeyStatus const &stat)
                 am->play(mBSID, ENKey_isPlayer1(getKey()) ? 1 : 2, mVol, mPan);  // Play sound.
                 if (b_temp.rank == EJRank::NONE) {                  // [WAIT] Hit too early
                     return;
+                } else if (b_temp.rank == EJRank::MISS
+                        || b_temp.rank == EJRank::AUTO) {           // [DONE] Rare case of MISS right when the key is hit.
+                    mBScore = b_temp;
+                    mEScore = b_temp;
+                    calc_score();
+                    return;
                 } else {                                            // [LIVE] Staring point scores!
                     mBScore = b_temp;
                     return;                                     // DO NOT CLEAR FROM ACTIVE QUEUE
@@ -319,7 +325,7 @@ void Note_Long::update(UI::Tracker const &tracker, KeyStatus const &stat)
  * - A HOLD note MUST be located before a RELEASE note.
  * - Both ends of the long notes MUST have identical Sample IDs, except
  *   in the case of BMS's LN_TYPE 1 mode.
- * - Switching between HOLD notes and NORMAL notes are allowed because 
+ * - Switching between HOLD notes and NORMAL notes are allowed because
  *   they both make sounds.
  * - Deletion of RELEASE notes are allowed because they do not make any sound.
  */
