@@ -313,15 +313,15 @@ bool Tracker::process_input(const clan::InputEvent& event)
         {
             switch (event.id)
             {
-                case clan::InputCode::keycode_escape:
-                    exit_with_code(0);
-                    return true;
             }
 
             return false;
         } else if (event.type == clan::InputEvent::Type::released) {
             switch (event.id)
             {
+                case clan::InputCode::keycode_escape:
+                    exit_with_code(0);
+                    return true;
             }
         }
     } else if (event.device.get_type() == clan::InputDevice::Type::pointer) {

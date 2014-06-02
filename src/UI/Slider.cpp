@@ -17,14 +17,14 @@ inline float get_normalized_value(int const &value, int const &a, int const &b) 
 Slider::Slider(clan::GUIComponent *parent)
     : clan::GUIComponent(parent, "Slider")
     , mDirection(Slider::Direction::RIGHT)
-    , mMin(-1)
-    , mMax( 1)
-    , mValue ( 0)
+    , mMin  (-1)
+    , mMax  ( 1)
+    , mValue( 0)
     , mqThumbHold(false)
     , m_PointerPosition()
 {
     func_render().set(this, &Slider::on_render);
-    func_input().set(this, &Slider::on_input);
+    func_input ().set(this, &Slider::on_input);
     // func_input already calls this.
     // func_input_pointer_moved().set(this, &Slider::on_pointer_move);
 }
@@ -72,48 +72,59 @@ void Slider::on_render(clan::Canvas &canvas, recti const &clipRect) {
 
 
 bool Slider::on_input(clan::InputEvent const &event) {
-    if (event.device.get_type() == clan::InputDevice::Type::pointer) {
+    if (debug)
+        dump_event(event, "Slider");
+
+    if (event.device.get_type() == clan::InputDevice::Type::pointer)
+    {
         switch (event.type) {
             case clan::InputEvent::Type::pointer_moved:
-                return on_pointer_move(event);
+                on_pointer_move(event);
+                return true;
+                break;
 
             case clan::InputEvent::Type::pressed:
-                if (event.id == clan::InputCode::mouse_left)
-                    return on_pointer_lbtn_on(event);
+                if (event.id == clan::InputCode::mouse_left) {
+                    on_pointer_lbtn_on(event);
+                    return true;
+                }
                 break;
 
             case clan::InputEvent::Type::released:
-                if (event.id == clan::InputCode::mouse_left)
-                    return on_pointer_lbtn_off(event);
+                if (event.id == clan::InputCode::mouse_left) {
+                    on_pointer_lbtn_off(event);
+                    return true;
+                }
                 break;
 
             case clan::InputEvent::Type::axis_moved:
                 // TODO: Implement Scroll wheel
                 break;
-
         }
     }
 
     return false;
 }
 
-bool Slider::on_pointer_move(clan::InputEvent const &event) {
+void Slider::on_pointer_move(clan::InputEvent const &event) {
     assert(event.device.get_type() == clan::InputDevice::Type::pointer);
     assert(event.type == clan::InputEvent::Type::pointer_moved);
 
-    if (mqThumbHold == true)
-        return on_pointer_drag(event);
-
+    if (mqThumbHold == true) {
+        on_pointer_drag(event);
+        return;
+    }
     // If pointer on top of thumb, make it pretty or something
+
 }
 
-bool Slider::on_pointer_drag(clan::InputEvent const &event) {
+void Slider::on_pointer_drag(clan::InputEvent const &event) {
     assert(event.device.get_type() == clan::InputDevice::Type::pointer);
     assert(event.type == clan::InputEvent::Type::pointer_moved);
     assert(mqThumbHold == true);
 
     point2i new_pos = component_to_screen_coords(event.mouse_pos);
-    clan::Console::write_line("(%1,%2)", new_pos.x, new_pos.y);
+    // clan::Console::write_line("(%1,%2)", new_pos.x, new_pos.y);
     char incr = 0;
     switch (mDirection) {
         case Direction::RIGHT:
@@ -133,7 +144,7 @@ bool Slider::on_pointer_drag(clan::InputEvent const &event) {
     incr = incr / std::abs(incr); // Strip magnitude
 
     if (incr == 0) {
-        return true;
+        return;
     } else {
         mValue // Take new value if it is inside the slider range.
                 = is_in_range(mValue + incr, mMin, mMax)
@@ -154,7 +165,7 @@ bool Slider::on_pointer_drag(clan::InputEvent const &event) {
     request_repaint();
 }
 
-bool Slider::on_pointer_lbtn_on(clan::InputEvent const &event) {
+void Slider::on_pointer_lbtn_on(clan::InputEvent const &event) {
     assert(event.device.get_type() == clan::InputDevice::Type::pointer);
     assert(event.id == clan::InputCode::mouse_left);
     assert(event.type == clan::InputEvent::Type::pressed);
@@ -165,11 +176,9 @@ bool Slider::on_pointer_lbtn_on(clan::InputEvent const &event) {
         capture_mouse(true);
         request_repaint();
     }
-
-    return true;
 }
 
-bool Slider::on_pointer_lbtn_off(clan::InputEvent const &event) {
+void Slider::on_pointer_lbtn_off(clan::InputEvent const &event) {
     assert(event.device.get_type() == clan::InputDevice::Type::pointer);
     assert(event.id == clan::InputCode::mouse_left);
     assert(event.type == clan::InputEvent::Type::released);
@@ -180,8 +189,6 @@ bool Slider::on_pointer_lbtn_off(clan::InputEvent const &event) {
         capture_mouse(false);
         request_repaint();
     }
-
-    return true;
 }
 
 

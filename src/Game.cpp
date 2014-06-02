@@ -32,11 +32,18 @@ bool Game::process_input(clan::InputEvent const &event)
         dump_event(event, "Game");
 
     if (event.device.get_type() == clan::InputDevice::Type::keyboard)
+    {
         if (event.type == clan::InputEvent::Type::pressed)
-            if (event.id   == clan::InputCode::keycode_escape) {
+        {
+            if (event.id == clan::InputCode::keycode_escape) {
                 this->exit_with_code(0);
                 return true;
+            } else if (event.id == clan::InputCode::keycode_f12) {
+                debug = !debug;
+                return true;
             }
+        }
+    }
     return false;
 }
 

@@ -28,6 +28,7 @@ private:
     clan::Callback_v0 mfValueChanged;
 
     ////    Slider Thumb state variables    ////
+
     bool        mqThumbHold;        /// Is the slider thumb being held down?
     point2i     m_PointerPosition;  /// Location of the mouse pointer on the previous update.
 
@@ -51,13 +52,15 @@ public:
     ////    Class interaction callback    ////
     inline clan::Callback_v0& func_value_changed() { return mfValueChanged; }
 
-    ////    Class GUI callback listeners and functions    ////
+    ////    Class GUI callback listeners    ////
     void on_render(clan::Canvas &canvas, recti const &clipRect);
     bool on_input(clan::InputEvent const &event);
-    bool on_pointer_move(clan::InputEvent const &event);
-    bool on_pointer_drag(clan::InputEvent const &event);
-    bool on_pointer_lbtn_on(clan::InputEvent const &event);
-    bool on_pointer_lbtn_off(clan::InputEvent const &event);
+
+    ////    Class GUI callback listener functions    ////
+    void on_pointer_move(clan::InputEvent const &event);
+    void on_pointer_drag(clan::InputEvent const &event);
+    void on_pointer_lbtn_on(clan::InputEvent const &event);
+    void on_pointer_lbtn_off(clan::InputEvent const &event);
 };
 
 

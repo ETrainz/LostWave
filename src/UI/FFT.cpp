@@ -308,11 +308,11 @@ void FFT::render(clan::Canvas &canvas, recti const &clip_rect)
 
         canvas.fill_rect(out, color);
 
-        const float vec = 4.0f * ( mSpectrum.getSample(i*2+1) - mSpectrum.getSample(i*2  ) );
+        const float vec = 3.0f * ( mSpectrum.getSample(i*2+1) - mSpectrum.getSample(i*2  ) );
         canvas.fill_triangle(
-                point2f{ midpt + mVector.get0Sample(i+1), bandw * (mBands-i+2) },
-                point2f{ midpt + mVector.get0Sample(i  ), bandw * (mBands-i+1) },
-                point2f{ midpt + vec                    , bandw * (mBands-i  ) },
+                point2f{ midpt + vec                  , bandw * (mBands-i+2) },
+                point2f{ midpt + mVector.get0Sample(i), bandw * (mBands-i+1) },
+                point2f{ midpt + vec                  , bandw * (mBands-i  ) },
                 clan::Colorf { 1.0f, 1.0f, 1.0f, 0.2f }
                 );
 
