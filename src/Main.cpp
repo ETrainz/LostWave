@@ -21,6 +21,7 @@
 #include "Chart_O2Jam.hpp"
 #include "Chart_BMS.hpp"
 
+
 // TODO constexpr pairs are not supported until C++14
 UI::Tracker::KeyInputList default_keymap
 {
@@ -49,6 +50,10 @@ KeyList default_keylist
 
 static void autoVisualize(AudioManager* am, UI::FFT* FFTbg, UI::FFT* FFTp1, UI::FFT* FFTp2, UI::Timer* timer)
 {
+#if !( defined(_WIN32) || defined(_WIN64) )
+    pthread_setname_np(pthread_self(), "Audio VFX");
+#endif
+
     ulong count = 0;
 
     while(am->getRunning().test_and_set())

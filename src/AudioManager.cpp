@@ -2,8 +2,12 @@
 #include <chrono>
 #include <list>
 
+#if !( defined(_WIN32) || defined(_WIN64) )
+#include <pthread.h> // POSIX Thread naming
+#endif
+
 AudioManager::AudioManager(size_t frame_count, size_t sample_rate)
-    : awe::AEngine(sample_rate, frame_count, awe::APortAudio::HostAPIType::JACK)
+    : awe::AEngine(sample_rate, frame_count, awe::APortAudio::HostAPIType::Default)
     , mUpdateCount(0)
     // , mRunning(ATOMIC_FLAG_INIT)
 {
@@ -21,6 +25,9 @@ AudioManager::AudioManager(size_t frame_count, size_t sample_rate)
 
     mThreads.push_back(
         new std::thread( [this] () {
+#if !( defined(_WIN32) || defined(_WIN64) )
+            pthread_setname_np(pthread_self(), "Audio Engine");
+#endif
             while(mRunning.test_and_set())
             {
                 if (this->update() == false)
