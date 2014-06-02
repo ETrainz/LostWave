@@ -6,6 +6,7 @@
 
 #include "aweTrack.h"
 #include "awePortAudio.h"
+#include "aweSample.h" // read_targetRate
 
 namespace awe {
 
@@ -29,6 +30,7 @@ public:
     ) : mOutputDevice(),
         mMasterTrack (sampling_rate, op_frame_rate, "Output to Device")
     {
+        awe::Asample::mSampleRate = sampling_rate;
         if (mOutputDevice.init(sampling_rate, op_frame_rate, device_type) == false)
             throw std::runtime_error("libawe [exception] Could not initialize output device.");
     }

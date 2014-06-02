@@ -13,7 +13,7 @@ namespace awe {
 class Asample : public Asource
 {
 private:
-    typedef Filter::AscMixer AscMixer;
+    using AscMixer = Filter::AscMixer;
 
     /**
      * Pointer to audio buffer data.
@@ -32,7 +32,7 @@ private:
      */
     Afloat      mSourcePeak;
 
-    unsigned    mSampleRate;    //! Sampling rate of sound sample.
+    // unsigned    mSampleRate;    //! Sampling rate of sound sample.
     std::string mSampleName;    //! Descriptive name of the sample.
 
 protected:
@@ -40,6 +40,8 @@ protected:
     Aloop       mLoop;  //! Sample traversal state variable
 
 public:
+    static unsigned mSampleRate;
+
     /**
      * Default constructor
      */
@@ -97,7 +99,7 @@ public:
     inline const std::string & getName      () const { return mSampleName; }
     inline void pause() { mLoop.paused = true; }
     inline void stop () { mLoop = Aloop(mLoop.begin, mLoop.end, mLoop.mode, true); }
-    inline void play () { mLoop.paused = false; }
+    inline void play () { mLoop.paused = true; }
     inline void play (Afloat vol, Afloat pan, bool looping = false)
     {
         mMixer = AscMixer(vol, pan);

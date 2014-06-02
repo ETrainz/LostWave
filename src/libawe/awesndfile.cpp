@@ -2,6 +2,7 @@
 //  Copyright 2012 - 2013 Keigen Shu
 
 #include <exception>
+#include "soxr/src/soxr.h"
 #include "awesndfile.h"
 #include "aweSample.h"
 
@@ -11,36 +12,77 @@ namespace awe {
 /* read data from SNDFILE into sample */
 void read_sndfile(Asample* sample, SNDFILE* sndf, SF_INFO* info)
 {
-    // Second buffer needed for overclip bug workaround
-    AiBuffer* bufi = new AiBuffer(info->channels, info->frames, false);
-    AfBuffer* buff = new AfBuffer(info->channels, info->frames, true );
+    bool    doResample  =   // Resample audio to another sampling rate.
+        (sample->getSampleRate() >  0) &&
+        (sample->getSampleRate() != static_cast<unsigned>(info->samplerate));
+
+    float   doRescaling =   // Do not scale samples to fit.
+        (sample->getPeak() > 0.0f);
+
+
+    AfBuffer* buff = new AfBuffer(info->channels, info->frames, true);
+    AiBuffer* bufi;
 
     // Read as float
     sf_readf_float(sndf, buff->data(), info->frames);
 
     // Find peak sample value in file.
-    float peakValue;
+    float peakValue = 1.0f;
 
-    if (sf_command(sndf, SFC_GET_SIGNAL_MAX, &peakValue, sizeof(peakValue)) == SF_FALSE)
+    if (doRescaling)
     {
-        // Peak value not provided by file, calculate ourself.
-        peakValue = 1.0f;
-
-        for (const Afloat &x : *buff) {
-            if (std::fabs(x) > peakValue)
-                peakValue = std::fabs(x);
+        if (sf_command(sndf, SFC_GET_SIGNAL_MAX, &peakValue, sizeof(peakValue)) == SF_FALSE)
+        {
+            // Peak value not provided by file, calculate ourself.
+            for (const Afloat &x : *buff) {
+                if (std::fabs(x) > peakValue)
+                    peakValue = std::fabs(x);
+            }
         }
+
+        // Rescale samples
+        for (Afloat &x : *buff)
+            x /= peakValue;
     }
 
-    // Fix and copy buffer
-    for (const Afloat &x : *buff) {
-        bufi->push_back(to_Aint(x / peakValue));
+    if (doResample)
+    {
+        // Resample with libsoxr
+        bufi = new AiBuffer(
+                info->channels
+                , ceil( static_cast<float>(sample->getSampleRate())
+                    /   static_cast<float>(info->samplerate)
+                    *   static_cast<float>(info->frames)
+                    )
+                , true
+                );
+
+        size_t iDone = 0, oDone = 0;
+        soxr_io_spec_t      soxIOs = soxr_io_spec(SOXR_FLOAT32_I, SOXR_INT16_I);
+        soxr_quality_spec_t soxQs  = soxr_quality_spec(SOXR_VHQ, 0);
+
+        soxr_error_t error = soxr_oneshot(
+                info->samplerate, sample->getSampleRate(), info->channels,  // Input rate   , Output Rate   , Channel Count
+                buff->data(), buff->getFrameCount(), &iDone,                // Input data   , Input Length  , ptr to inputDone
+                bufi->data(), bufi->getFrameCount(), &oDone,                // Output data  , Output Length , ptr to outputDone
+                &soxIOs, &soxQs, NULL
+                );
+
+        if (error)
+            throw new std::runtime_error(error);
+
+    } else {
+        // Fix sampling scale and push to int16 buffer.
+        bufi = new AiBuffer(info->channels, info->frames, false);
+
+        for (const Afloat &x : *buff)
+            bufi->push_back(to_Aint(x));
     }
 
     delete buff;
 
     // Save buffer into sample, clean up and return
-    sample->setSource(bufi, peakValue, info->samplerate);
+    sample->setSource(bufi, peakValue, doResample ? sample->getSampleRate() : info->samplerate);
 
     sf_close(sndf);
 
@@ -49,6 +91,8 @@ void read_sndfile(Asample* sample, SNDFILE* sndf, SF_INFO* info)
 
 
 /* Read from memory -- libsndfile virtual IO functions */
+
+SF_VIRTUAL_IO awe_sf_vmio = { awe_sf_vmio_get_filelen, awe_sf_vmio_seek, awe_sf_vmio_read, awe_sf_vmio_write, awe_sf_vmio_tell };
 
 sf_count_t awe_sf_vmio_get_filelen(void *user_data)
 {
@@ -118,7 +162,7 @@ Asample::Asample(
 )   : Asource()
     , mSource(nullptr)
     , mSourcePeak(1.0)
-    , mSampleRate(0)
+//    , mSampleRate(0)
     , mSampleName(file)
     , mMixer(1.0, 0.0)
     , mLoop(0, 0, 0, _loop)
@@ -153,7 +197,7 @@ Asample::Asample(
 )   : Asource()
     , mSource(nullptr)
     , mSourcePeak(1.0)
-    , mSampleRate(0)
+//    , mSampleRate(0)
     , mSampleName(_name)
     , mMixer(1.0, 0.0)
     , mLoop(0, 0, 0, _loop)

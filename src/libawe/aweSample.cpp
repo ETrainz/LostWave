@@ -5,6 +5,8 @@
 
 namespace awe {
 
+unsigned Asample::mSampleRate = 0;
+
 Asample::Asample(
     AiBuffer*   const &_source,
     Afloat      const &_peak,
@@ -14,7 +16,7 @@ Asample::Asample(
 )   : Asource()
     , mSource(_source)
     , mSourcePeak(_peak)
-    , mSampleRate(_rate)
+//    , mSampleRate(_rate)
     , mSampleName(_name)
     , mLoop(0, 0, _source == nullptr ? 0 : _source->getFrameCount(), _loop)
 { }
@@ -23,7 +25,7 @@ Asample::Asample(Asample* _source)
     : Asource()
     , mSource(_source->getSource())
     , mSourcePeak(_source->getPeak())
-    , mSampleRate(_source->getSampleRate())
+//    , mSampleRate(_source->getSampleRate())
     , mSampleName(_source->getName())
     , mMixer(_source->cgetMixer())
     , mLoop(_source->cgetLoop())

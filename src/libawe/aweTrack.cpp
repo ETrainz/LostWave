@@ -42,6 +42,9 @@ Atrack::Atrack(
 
 void Atrack::render(AfBuffer &targetBuffer, const ArenderConfig &targetConfig)
 {
+    if (targetConfig.quality == ArenderConfig::Quality::SKIP)
+        return;
+
     std::lock(mPmutex, mOmutex);
 
     size_t a = 0, p = targetConfig.targetFrameOffset;
@@ -56,6 +59,9 @@ void Atrack::render(AfBuffer &targetBuffer, const ArenderConfig &targetConfig)
     }
 
     ffilter();
+
+    if (targetConfig.quality == ArenderConfig::Quality::MUTE)
+        return;
 
     AfBuffer::const_pointer src = mObuffer.data();
     AfBuffer::      pointer dst = targetBuffer.data();
