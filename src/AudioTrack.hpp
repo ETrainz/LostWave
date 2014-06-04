@@ -47,6 +47,8 @@ public:
 
     ~AudioTrack();
 
+    static sizei _getSize(bool mini = false);
+
     ////    GUI Component Methods    //////////////////////////////////
     void render(clan::Canvas &canvas, const recti &clip_rect);
 

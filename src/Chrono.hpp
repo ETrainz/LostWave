@@ -100,6 +100,12 @@ public:
         return tct_stop > 0;
     }
 
+    inline unsigned const &getTicksPerBeat   () const { return tsg_tpb; }
+    inline unsigned const &getBeatsPerMeasure() const { return tsg_bpm; }
+    inline unsigned getTicksPerMeasure() const { return tsg_tpb * tsg_bpm; }
+
+    inline unsigned getTicksSinceMeasure() const { return currTTime.tick + currTTime.beat * tsg_tpb; }
+
     inline bool status () { return isTicking; }
     inline void start () { isTicking = true ; tct_mstt = 0; }
     inline void pause () { isTicking = false; }

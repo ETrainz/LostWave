@@ -23,6 +23,8 @@ public:
         mPan(pan)
     { }
 
+    virtual ~Note_Single() { }
+
     inline float const & getVol() const { return mVol; }
     inline float const & getPan() const { return mPan; }
 
@@ -90,6 +92,8 @@ public:
         mBScore(JScore()), mEScore(JScore()),
         mHasEndPoint(true)
     { }
+
+    virtual ~Note_Long() { }
 
     inline std::pair<TTime,TTime> getTime() const
     {

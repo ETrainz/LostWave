@@ -22,59 +22,90 @@ namespace UI {
 class Tracker : public clan::GUIComponent
 {
 public:
-    using KeyNoteMap    = std::map< ENKey, Note* >;
-    using KeyInputMap   = std::map< ENKey, InputManager::KeyCode >;
-    using KeyInputPair  = KeyInputMap::value_type;
-    using KeyInputList  = std::list< KeyInputPair >;
     using RankScoreMap  = std::map< EJRank, int >;
+    using KeyCode       = InputManager::KeyCode;
+
+    /** Operational context for note lanes / keys.
+     *
+     * #TODO Allow multiple input codes.
+     * #TODO Put KeyStatus here and ditch InputManager.
+     * #TODO Allow indiviudal key theming. (maybe put this into a separate model?)
+     */
+    struct Channel
+    {
+        ENKey       key;    //! Note channel key
+        KeyCode     code;   //! Player input key code
+
+        Note      * note;   //! Currently focused note.
+
+        ////    Graphical state variables    ///////////////////////////
+        clan::Sprite    sprHit;         //! Note hit effect sprite
+        clan::Colorf    clrLaneKeyOn;   //! Lane color when key is pressed
+    };
+
+    //  Channel object container type
+    using ChannelList   = std::list < Channel >;
 
 private:
+    ////    Judgement and Scoring    ///////////////////////////////////
     Judge           mJudge;
+
     RankScoreMap    mRankScores;
     uint            mCombo, mMaxCombo;
 
-    KeyList         mShowKeys;  // Keys to show in tracker. Keys not shown are autoplayed by default.
-    KeySet          mAutoKeys;  // Keys in mActiveKeys to autoplay.
 
+    ////    Chart    ///////////////////////////////////////////////////
     Chart*          mChart;
 
-    TClock*         mClock;
+
+    ////    Clocks and Timing    ///////////////////////////////////////
+    TClock      *   mClock;
+    TTime const &   mTime;
     long            mCurrentTick;
 
     bool            mChartEnded;
     uint            mMeasureIterStart;
 
-    KeyInputMap     mKeyInputs;
-    KeyNoteMap      mKeyNotes;
 
+    ////    Note Lane Channeling    ////////////////////////////////////
+    ChannelList     mChannelList;
+
+    ////    Input Manager    ///////////////////////////////////////////
+    InputManager    mIM;
+
+
+    ////    Graphics    ///////////////////////////////////////////////
+    clan::Texture2D mT_Hit;
     NoteList        mRenderList;
 
-    InputManager    mIM;
+
+    ////    Modifiers    ///////////////////////////////////////////////
+    bool            mAutoPlay;
     float           mSpeedX;
 
-    ////    Convenience variables    //////////////////////////////////
-    TTime const &   mTime;
+
 
 public:
-    Tracker(
-        Game        *game ,
-        recti const &area ,
-        Judge const &judge,
-        Chart       *chart,
-        KeyInputList const &show_keys,
-        KeyList      const &auto_keys,
-        std::string  const &label = "",
-        TClock             *clock = nullptr
-    );
+    Tracker
+        ( Game        * game
+        , recti const & area
+        , Judge const & judge
+        , Chart       * chart
+        , ChannelList const & channels
+        , std::string const & ref_label = ""
+        , TClock            * ref_clock = nullptr
+        );
 
     inline Judge   const &cgetJudge() const { return mJudge; }
     inline Judge         & getJudge()       { return mJudge; }
     inline TClock  const *cgetClock() const { return mClock; }
     inline TClock        * getClock()       { return mClock; }
     inline long    const & getCurrentTick() const { return mCurrentTick; }
-    inline KeyList const & getActiveKeys () const { return mShowKeys; }
 
     inline float   const & getSpeedX() const { return mSpeedX; }
+
+    inline void setSpeedX(float value = 1.0f) { mSpeedX = value; } // #TODO validation checks
+    inline void setAutoplay(bool value = true) { mAutoPlay = value; }
 
     point2i translate(ENKey const &key, long const &time) const;
 
@@ -88,13 +119,13 @@ public:
     void loop_Params(ParamEventList &params);
     void loop_Notes (NoteList &notes, uint &cache);
 
+    void process_input();
+
     ////    Depended by Note    ///////////////////////////////////////
     rectf getDrawRect(ENKey const &key, long const &time) const;
 
     ////    GUI Component Callbacks    ////////////////////////////////
     void render(clan::Canvas &canvas, recti const &clip_rect);
-    bool process_input(clan::InputEvent const &event);
-
 };
 
 }

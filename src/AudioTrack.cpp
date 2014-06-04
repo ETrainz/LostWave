@@ -46,6 +46,8 @@ const sizei     kmSize      = { kmWidth, kmMeterSize.height + kmButtonSize.heigh
 const point2i   kmoMeter    = { kmPadding, kmPadding };
 const point2i   kmoButton   = { kmPadding, kmoMeter.y + kmMeterSize.height + kmPadding * 2 };
 
+sizei AudioTrack::_getSize(bool mini) { return mini ? kmSize : kSize; }
+
 ////    AudioTrack class    ///////////////////////////////////////////
 AudioTrack::AudioTrack(
     awe::Atrack        *source,

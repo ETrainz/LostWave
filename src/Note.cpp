@@ -16,15 +16,23 @@ void Note_Single::init(UI::Tracker const &tracker)
 
 void Note_Single::render(UI::Tracker const &tracker, clan::Canvas &canvas) const
 {
+    if (this->getScore().rank != EJRank::NONE) return;
+
     rectf p = tracker.getDrawRect(this->getKey(), this->getTick());
 
-    if (p.left > canvas.get_width () || p.right  < 0)
+    if (p.left > tracker.get_width () || p.right  < 0)
         return;
-    if (p.top  > canvas.get_height() || p.bottom < 0)
+    if (p.top  > tracker.get_height())
         return;
 
-    p.top    = canvas.get_height() - p.top;
-    p.bottom = canvas.get_height() - p.bottom;
+    p.top    = tracker.get_height() - p.top;
+    p.bottom = tracker.get_height() - p.bottom;
+
+    // Clip note to edge of tracker
+    if (p.bottom > tracker.get_height()) {
+        p.top       = tracker.get_height() - std::abs(p.bottom - p.top);
+        p.bottom    = tracker.get_height();
+    }
 
     clan::Colorf color;
 
@@ -102,17 +110,23 @@ void Note_Long::render(UI::Tracker const &tracker, clan::Canvas &canvas) const
     recti pe = tracker.getDrawRect(this->getKey(), mETick);
 
     // Skip unused
-    if (pb.left > canvas.get_width () || pb.right  < 0 ||
-        pe.left > canvas.get_width () || pe.right  < 0)
+    if (pb.left > tracker.get_width () || pb.right  < 0 ||
+        pe.left > tracker.get_width () || pe.right  < 0)
         return;
-    if (pb.top  > canvas.get_height() || pe.bottom < 0)
+    if (pb.top  > tracker.get_height() || pe.bottom < 0)
         return;
 
     // Flip around
-    pb.top    = canvas.get_height() - pb.top;
-    pb.bottom = canvas.get_height() - pb.bottom;
-    pe.top    = canvas.get_height() - pe.top;
-    pe.bottom = canvas.get_height() - pe.bottom;
+    pb.top    = tracker.get_height() - pb.top;
+    pb.bottom = tracker.get_height() - pb.bottom;
+    pe.top    = tracker.get_height() - pe.top;
+    pe.bottom = tracker.get_height() - pe.bottom;
+
+    // Clip beginning note to edge of target
+    if (pb.bottom > tracker.get_height()) {
+        pb.top      = tracker.get_height() - std::abs(pb.bottom - pb.top);
+        pb.bottom   = tracker.get_height();
+    }
 
     clan::Colorf color;
 
@@ -200,8 +214,11 @@ void Note_Long::update(UI::Tracker const &tracker, KeyStatus const &stat)
                 mBScore = JScore( EJRank::AUTO, 0, b_temp.delta );
             }
 
-            if (e_temp.rank == EJRank::MISS) {
+            if (mEScore.rank == EJRank::NONE) {
                 mEScore = JScore( EJRank::AUTO, 0, e_temp.delta );
+            }
+
+            if (e_temp.delta < 0) {
                 mScore  = JScore( EJRank::AUTO, 0, 0 );
                 mDead = true;
             }

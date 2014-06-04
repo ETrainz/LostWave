@@ -22,8 +22,7 @@
 #include "Chart_BMS.hpp"
 
 
-// TODO constexpr pairs are not supported until C++14
-UI::Tracker::KeyInputList default_keymap
+UI::Tracker::ChannelList default_ChannelList
 {
     { ENKey::NOTE_P1_1, clan::InputCode::keycode_s },
     { ENKey::NOTE_P1_2, clan::InputCode::keycode_d },
@@ -33,19 +32,6 @@ UI::Tracker::KeyInputList default_keymap
     { ENKey::NOTE_P1_6, clan::InputCode::keycode_k },
     { ENKey::NOTE_P1_7, clan::InputCode::keycode_l }
 };
-
-KeyList default_keylist
-{
-    ENKey::NOTE_P1_1,
-    ENKey::NOTE_P1_2,
-    ENKey::NOTE_P1_3,
-    ENKey::NOTE_P1_4,
-    ENKey::NOTE_P1_5,
-    ENKey::NOTE_P1_6,
-    ENKey::NOTE_P1_7
-};
-
-
 
 
 static void autoVisualize(AudioManager* am, UI::FFT* FFTbg, UI::FFT* FFTp1, UI::FFT* FFTp2, UI::Timer* timer)
@@ -166,20 +152,16 @@ int App::main(std::vector<std::string> const &args)
 
             UI::Timer* timer = new UI::Timer(game, {1.0f, 0.8f, 0.0f, 0.6f}, {1.0f, 1.0f, 0.0f, 0.8f});
 
-            AudioTrack* ATPM = new AudioTrack(&game->am.getMasterTrack()   , game, point2i{ 200,0 });
-            AudioTrack* ATP0 = new AudioTrack(game->am.getTrackMap()->at(0), game, point2i{ 250,0 });
-            AudioTrack* ATP1 = new AudioTrack(game->am.getTrackMap()->at(1), game, point2i{ 300,0 });
-            AudioTrack* ATP2 = new AudioTrack(game->am.getTrackMap()->at(2), game, point2i{ 350,0 });
+            AudioTrack* ATPM = new AudioTrack(&game->am.getMasterTrack()   , game, point2i{ 600, game->get_height() - AudioTrack::_getSize().height });
+            AudioTrack* ATP0 = new AudioTrack(game->am.getTrackMap()->at(0), game, point2i{ 650, game->get_height() - AudioTrack::_getSize().height });
+            AudioTrack* ATP1 = new AudioTrack(game->am.getTrackMap()->at(1), game, point2i{ 700, game->get_height() - AudioTrack::_getSize().height });
+            AudioTrack* ATP2 = new AudioTrack(game->am.getTrackMap()->at(2), game, point2i{ 750, game->get_height() - AudioTrack::_getSize().height });
 
             std::thread* av_thread = new std::thread(autoVisualize, &game->am, FFTbg, FFTp1, FFTp2, timer);
             game->am.attach_thread(av_thread);
         }
 
-        bool autoplay = config.get_or_set(
-                &JSONReader::getBoolean, "player.P1.autoplay", false);
-
-        KeyList                     keys;
-        UI::Tracker::KeyInputList   key_inputs;
+        UI::Tracker::ChannelList channels(default_ChannelList);
 
         {   // Populate input keys based on config.
             std::string input_str = config.get_if_else_set(
@@ -191,19 +173,18 @@ int App::main(std::vector<std::string> const &args)
 #else
             std::transform(input_str.begin(), input_str.end(), input_str.begin(), ::tolower);
 #endif
-            auto it = default_keylist.cbegin();
+            auto chIter = channels.begin();
             for(char const &c : input_str)
             {
-                keys.push_back(*it);
-                key_inputs.push_back({*it, c});
-                it++;
+                chIter->code = c;
+                chIter++;
             }
         }
 
         Music* music;
         Chart* chart;
 
-        recti chart_area(0, 0, 200, game->get_height());
+        recti chart_area(50, 50, 450, game->get_height() - 50);
 
         if (args.size() > 1)
         {
@@ -226,10 +207,7 @@ int App::main(std::vector<std::string> const &args)
                 chart->sort_sequence();
 
                 {
-                    UI::Tracker tracker(
-                        game, chart_area, JHard, chart,
-                        key_inputs, autoplay ? keys : KeyList()
-                    );
+                    UI::Tracker tracker(game, chart_area, JHard, chart, channels);
                     tracker.start();
                     tracker.exec();
                 }
@@ -254,10 +232,7 @@ int App::main(std::vector<std::string> const &args)
                 chart->sort_sequence();
 
                 {
-                    UI::Tracker tracker(
-                        game, chart_area, JHard, chart,
-                        key_inputs, autoplay ? keys : KeyList()
-                    );
+                    UI::Tracker tracker(game, chart_area, JHard, chart, channels);
                     tracker.start();
                     tracker.exec();
                 }
