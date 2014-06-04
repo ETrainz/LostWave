@@ -218,7 +218,7 @@ void Note_Long::update(UI::Tracker const &tracker, KeyStatus const &stat)
                 mEScore = JScore( EJRank::AUTO, 0, e_temp.delta );
             }
 
-            if (e_temp.delta < 0) {
+            if (e_temp.delta <= 0) {
                 mScore  = JScore( EJRank::AUTO, 0, 0 );
                 mDead = true;
             }

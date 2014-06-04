@@ -46,6 +46,14 @@ Tracker::Tracker
                 "theme.play-1p.note.tex_hit.path",
                 std::string{ "Theme/Note_Hit.png" }
                 ))
+    , mT_Hit_Rank(   // #TODO Add this functionality into JSONReader
+            this->get_canvas().get_gc(),
+            game->skin.get_or_set(
+                &JSONReader::getString,
+                "theme.play-1p.note.tex_hit_rank.path",
+                std::string{ "Theme/Note_Hit_Rank.png" }
+                ))
+
     , mRenderList()
 
     , mAutoPlay (game->conf.get_or_set(
@@ -56,6 +64,15 @@ Tracker::Tracker
         [] (long const &value) -> bool { return value > 0.25; }
         ))
 {
+    ////    Setup Graphics
+
+    mI_Hit_Rank[0] = clan::Image(mT_Hit_Rank, recti{  1,  1, 45,  8 });
+    mI_Hit_Rank[1] = clan::Image(mT_Hit_Rank, recti{  1, 10, 26, 17 });
+    mI_Hit_Rank[2] = clan::Image(mT_Hit_Rank, recti{  1, 19, 26, 26 });
+    mI_Hit_Rank[3] = clan::Image(mT_Hit_Rank, recti{  1, 28, 20, 35 });
+    mI_Hit_Rank[4] = clan::Image(mT_Hit_Rank, recti{  1, 37, 26, 44 });
+
+
     ////    Setup GUI Component
     func_render().set(this, &Tracker::render);
 
@@ -158,6 +175,7 @@ rectf Tracker::getDrawRect(ENKey const &key, long const &time) const
     return ret;
 }
 
+inline float gfx_pop_func(float x) { return sin( powf(2.0f * M_PI * x, 1.0f / 2.0f) ); }
 
 void Tracker::render(clan::Canvas& canvas, const recti& clip_rect)
 {
@@ -169,21 +187,55 @@ void Tracker::render(clan::Canvas& canvas, const recti& clip_rect)
     float g = z - mSpeedX * (mJudge.cgetTP() + mJudge.cgetTC() + mJudge.cgetTG());
     float b = z - mSpeedX * (mJudge.cgetTP() + mJudge.cgetTC() + mJudge.cgetTG() + mJudge.cgetTB());
 
-    canvas.fill_rect({0, 0, 168, z}, { 1.0f, 1.0f, 1.0f, 0.1f});
+    canvas.fill_rect({0, 0, 168, z}, { 1.0f, 1.0f, 1.0f, 0.1f });
 
-    canvas.fill_rect({0, p, 168, z}, { 0.0f, 0.5f, 1.0f, 0.1f});
-    canvas.fill_rect({0, c, 168, p}, { 0.0f, 1.0f, 0.5f, 0.1f});
-    canvas.fill_rect({0, g, 168, c}, { 0.5f, 1.0f, 0.0f, 0.1f});
-    canvas.fill_rect({0, b, 168, g}, { 1.0f, 0.5f, 0.0f, 0.1f});
+    canvas.fill_rect({0, p, 168, z}, { 0.0f, 0.5f, 1.0f, 0.1f });
+    canvas.fill_rect({0, c, 168, p}, { 0.0f, 1.0f, 0.5f, 0.1f });
+    canvas.fill_rect({0, g, 168, c}, { 0.5f, 1.0f, 0.0f, 0.1f });
+    canvas.fill_rect({0, b, 168, g}, { 1.0f, 0.5f, 0.0f, 0.1f });
 
     if (mClock->isTStopped())
         canvas.fill_rect( { 0, 0, 168, z }, { 1.0f, 1.0f, 1.0f, 0.5f });
 
     canvas.push_cliprect( get_geometry() );
+
     for(Note *note : mRenderList)
         note->render(*this, canvas);
+
     mRenderList.clear();
     canvas.pop_cliprect();
+    {
+        std::list<point2i> cl_NRL;
+        for(auto pair : mNoteRankList)
+        {
+            int x = 0;
+            switch(pair.second) {
+                case EJRank::PERFECT: x = 0; break;
+                case EJRank::COOL   : x = 1; break;
+                case EJRank::GOOD   : x = 2; break;
+                case EJRank::BAD    : x = 3; break;
+                case EJRank::MISS   : x = 4; break;
+            }
+
+            point2f pos (pair.first.x, pair.first.y);
+
+            float z = static_cast<float>(mCurrentTick - pos.y) / static_cast<float>(mClock->getTicksPerMeasure() / 2);
+            if (z > 1.0f) {
+                cl_NRL.push_back(pair.first);
+                continue;
+            }
+
+            pos.y = (1.0f - gfx_pop_func(z) / 2.0f) * get_height();
+            mI_Hit_Rank[x].set_alpha(std::min(0.5f, (5.0f / 3.0f) * (1.0f - z)));
+            mI_Hit_Rank[x].draw(canvas, { pos.x - mI_Hit_Rank[x].get_width() / 2 }, pos.y);
+        }
+
+        for (auto elem : cl_NRL)
+            mNoteRankList.erase(mNoteRankList.find(elem));
+
+        cl_NRL.clear();
+    }
+
 
     for(auto &elem : mChannelList)
     {
@@ -265,6 +317,10 @@ void Tracker::update()
             // Update scoring statistics
             JScore score = elem.note->getScore();
             mRankScores[score.rank] += 1;
+            mNoteRankList[ point2i
+                    ( getDrawRect(elem.note->getKey(), 0).get_center().x
+                    , mCurrentTick
+                    )] = score.rank;
             if (score.rank != MISS && score.rank != BAD) {
                 mCombo += 1;
                 elem.sprHit.restart();
@@ -358,8 +414,13 @@ void Tracker::loop_Notes(NoteList &notes, uint &cache)
                         note->update(*this, KeyStatus::AUTO);
 
                         // Show note hit effect
-                        if (chIter != mChannelList.end())
+                        if (chIter != mChannelList.end() && note->isDead()) {
+                            mNoteRankList[ point2i
+                                    ( getDrawRect(note->getKey(), 0).get_center().x
+                                    , mCurrentTick
+                                    )] = EJRank::AUTO;
                             chIter->sprHit.restart();
+                        }
                     }
                 } else if ( chIter->note == nullptr ) {
                     chIter->note = note;

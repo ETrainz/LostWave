@@ -43,8 +43,11 @@ public:
         clan::Colorf    clrLaneKeyOn;   //! Lane color when key is pressed
     };
 
-    //  Channel object container type
+    //! Channel object container type
     using ChannelList   = std::list < Channel >;
+
+    //! Channel popping ranking
+    using I_NoteRank    = std::map  < point2i, EJRank >;
 
 private:
     ////    Judgement and Scoring    ///////////////////////////////////
@@ -75,9 +78,12 @@ private:
 
 
     ////    Graphics    ///////////////////////////////////////////////
-    clan::Texture2D mT_Hit;
-    NoteList        mRenderList;
+    clan::Texture2D     mT_Hit;
+    clan::Texture2D     mT_Hit_Rank;
+    clan::Image         mI_Hit_Rank[5];
 
+    NoteList            mRenderList;
+    I_NoteRank          mNoteRankList;
 
     ////    Modifiers    ///////////////////////////////////////////////
     bool            mAutoPlay;
