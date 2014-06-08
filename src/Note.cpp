@@ -18,7 +18,7 @@ void Note_Single::render(UI::Tracker const &tracker, clan::Canvas &canvas) const
 {
     if (this->getScore().rank != EJRank::NONE) return;
 
-    rectf p = tracker.getDrawRect(this->getKey(), this->getTick());
+    rectf p = tracker.getNoteRect(this->getKey(), this->getTick());
 
     if (p.left > tracker.get_width () || p.right  < 0)
         return;
@@ -106,8 +106,8 @@ void Note_Long::init(UI::Tracker const &tracker)
 
 void Note_Long::render(UI::Tracker const &tracker, clan::Canvas &canvas) const
 {
-    recti pb = tracker.getDrawRect(this->getKey(), mBTick);
-    recti pe = tracker.getDrawRect(this->getKey(), mETick);
+    recti pb = tracker.getNoteRect(this->getKey(), mBTick);
+    recti pe = tracker.getNoteRect(this->getKey(), mETick);
 
     // Skip unused
     if (pb.left > tracker.get_width () || pb.right  < 0 ||

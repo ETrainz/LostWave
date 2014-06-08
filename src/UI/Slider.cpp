@@ -29,45 +29,59 @@ Slider::Slider(clan::GUIComponent *parent)
     // func_input_pointer_moved().set(this, &Slider::on_pointer_move);
 }
 
-void Slider::on_render(clan::Canvas &canvas, recti const &clipRect) {
-    point2i midpoint { get_width() / 2, get_height() / 2 };
+void Slider::on_render(clan::Canvas &canvas, recti const &clipRect)
+{
+    const point2i midpoint { get_width() / 2, get_height() / 2 };
 
     float pos = get_normalized_value(mValue, mMin, mMax);
     switch (mDirection) {
         case Slider::Direction::RIGHT:
-            pos = pos * (get_width() - 2 * kPadding - 1);
-            break;
+            pos =         pos  * (get_width () - 2 * kPadding - 1); break;
         case Slider::Direction::LEFT:
-            pos = (1.0f - pos) * (get_width() - 2 * kPadding - 1);
-            break;
+            pos = (1.0f - pos) * (get_width () - 2 * kPadding - 1); break;
         case Slider::Direction::DOWN:
-            pos = pos * (get_height() - 2 * kPadding - 1);
-            break;
+            pos =         pos  * (get_height() - 2 * kPadding - 1); break;
         case Slider::Direction::UP:
-            pos = (1.0f - pos) * (get_height() - 2 * kPadding - 1);
-            break;
+            pos = (1.0f - pos) * (get_height() - 2 * kPadding - 1); break;
     }
 
     pos = std::round(pos);
     assert(pos >= 0);
     pos = pos + kPadding;
 
+    clan::Colorf clrMarker { 0.75f, 0.75f, 0.75f };
+    clan::Colorf clrRail   { 0.50f, 0.50f, 0.50f };
+
     /****/ if (mDirection >= Slider::Direction::DOWN) { // Vertical slider
-        canvas.draw_line(midpoint.x, kPadding, midpoint.x, get_height() - kPadding + 1, clan::Colorf::grey);
+        //  Railing and marker
+        canvas.draw_line(midpoint.x, kPadding, midpoint.x, get_height() - kPadding + 1, clrRail);
+
+        canvas.draw_line(midpoint.x     ,            1, get_width()    ,            1, clrMarker); // -
+        canvas.draw_line(get_width() - 2,            1, get_width() - 3, get_height(), clrMarker); // |
+        canvas.draw_line(midpoint.x     , get_height(), get_width()    , get_height(), clrMarker); // -
+        //  Thumb
+
         canvas.fill_rect(
                 0, pos - kPadding, get_width(), pos + kPadding + 1,
                 mqThumbHold ? clan::Colorf::green : clan::Colorf::black
                 );
-        canvas.draw_line(0, pos + 1, get_width(), pos + 1, clan::Colorf::grey);
+        canvas.draw_line(0, pos + 1, get_width(), pos + 1, clrMarker);
+
     } else { // Horizontal slider
-        canvas.draw_line(kPadding, midpoint.y, get_width() - kPadding + 1, midpoint.y, clan::Colorf::grey);
+        //  Railing and marker
+        canvas.draw_line(kPadding, midpoint.y, get_width() - kPadding + 1, midpoint.y, clrRail);
+
+        canvas.draw_line(          1, midpoint.y      ,           1, get_height()    , clrMarker); // |
+        canvas.draw_line(          1, get_height() - 2, get_width(), get_height() - 3, clrMarker); // -
+        canvas.draw_line(get_width(), midpoint.y      , get_width(), get_height()    , clrMarker); // |
+
+        //  Thumb
         canvas.fill_rect(
                 pos - kPadding, 0, pos + kPadding + 1, get_height(),
                 mqThumbHold ? clan::Colorf::green : clan::Colorf::black
                 );
         canvas.draw_line(pos + 1, 0, pos + 1, get_height(), clan::Colorf::grey);
     }
-
 }
 
 
@@ -146,8 +160,8 @@ void Slider::on_pointer_drag(clan::InputEvent const &event) {
     if (incr == 0) {
         return;
     } else {
-        mValue // Take new value if it is inside the slider range.
-                = is_in_range(mValue + incr, mMin, mMax)
+        // Take new value if it is inside the slider range.
+        mValue  = is_in_range(mValue + incr, mMin, mMax)
                 ? mValue + incr
                 // or take the limit that is closer to the value.
                 : mValue

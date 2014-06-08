@@ -16,15 +16,14 @@ Tracker::Tracker
     , std::string const & ref_label
     , TClock            * ref_clock
 ) : clan::GUIComponent(reinterpret_cast<clan::GUIComponent *>(game), "Tracker")
-
     , mJudge(judge)
     , mRankScores(
-        { { EJRank::PERFECT, 0 }
-        , { EJRank::COOL, 0 }
-        , { EJRank::GOOD, 0 }
-        , { EJRank::BAD , 0 }
-        , { EJRank::MISS, 0 }
-        })
+            { { EJRank::PERFECT, 0 }
+            , { EJRank::COOL, 0 }
+            , { EJRank::GOOD, 0 }
+            , { EJRank::BAD , 0 }
+            , { EJRank::MISS, 0 }
+            })
     , mCombo(0), mMaxCombo(0)
 
     , mChart(chart)
@@ -60,9 +59,9 @@ Tracker::Tracker
             &JSONReader::getBoolean, "player.P1.autoplay", false
             ))
     , mSpeedX   (game->conf.get_if_else_set(
-        &JSONReader::getInteger, "player.P1.speedx", 1.0,
-        [] (long const &value) -> bool { return value > 0.25; }
-        ))
+            &JSONReader::getInteger, "player.P1.speedx", 1.0,
+            [] (long const &value) -> bool { return value > 0.25; }
+            ))
 {
     ////    Setup Graphics
 
@@ -84,7 +83,11 @@ Tracker::Tracker
 
     //  Safely initialize channel list
     for(auto const &elem : channels)
-        mChannelList.push_back(Channel { elem.key, elem.code, nullptr, { canvas }, { 1.0f, 1.0f, 1.0f, 0.1f } });
+        mChannelList.push_back( Channel
+                { elem.key, elem.code
+                , nullptr, clan::Sprite { canvas }
+                , clan::Colorf { 1.0f, 1.0f, 1.0f, 0.1f }
+                });
 
     for(auto &elem : mChannelList)
     {
@@ -159,20 +162,25 @@ point2i Tracker::translate(ENKey const &ref, long const &time) const
     return { x, y };
 }
 
-rectf Tracker::getDrawRect(ENKey const &key, long const &time) const
+point2f Tracker::getNotePoint(ENKey const &key, long const &time) const
 {
     point2i p = translate(key, time);
-    p.y = static_cast<float>(p.y) * mSpeedX;
-
-    rectf ret(
-        1+24*p.x   , p.y  ,
-        1+24*p.x+22, p.y+4
-    );
-
     if (p.x == -1)
-        ret.left = -1, ret.right = -1;
+        return point2f { -1.0f, -1.0f };
+    else
+        return point2f 
+            { static_cast<float>(p.x) * 24.0f + 12.0f
+            , static_cast<float>(p.y) * mSpeedX
+            };
+}
 
-    return ret;
+rectf Tracker::getNoteRect(ENKey const &key, long const &time) const
+{
+    point2f p = getNotePoint(key, time);
+    if (p.x < 0.0f)
+        return {       -1.0f, p.y,       -1.0f, p.y + 4.0f };
+    else
+        return { p.x - 11.0f, p.y, p.x + 11.0f, p.y + 4.0f };
 }
 
 inline float gfx_pop_func(float x) { return sin( powf(2.0f * M_PI * x, 1.0f / 2.0f) ); }
@@ -239,7 +247,7 @@ void Tracker::render(clan::Canvas& canvas, const recti& clip_rect)
 
     for(auto &elem : mChannelList)
     {
-        rectf rLane = getDrawRect(elem.key, 0);
+        rectf rLane = getNoteRect(elem.key, 0);
         rLane.top       = 0;
         rLane.bottom    = get_height();
 
@@ -316,11 +324,9 @@ void Tracker::update()
         {
             // Update scoring statistics
             JScore score = elem.note->getScore();
-            mRankScores[score.rank] += 1;
-            mNoteRankList[ point2i
-                    ( getDrawRect(elem.note->getKey(), 0).get_center().x
-                    , mCurrentTick
-                    )] = score.rank;
+            mRankScores  [ score.rank ] += 1;
+            mNoteRankList[ point2i(getNotePoint(elem.note->getKey(), 0).x, mCurrentTick) ] = score.rank;
+
             if (score.rank != MISS && score.rank != BAD) {
                 mCombo += 1;
                 elem.sprHit.restart();
@@ -415,10 +421,7 @@ void Tracker::loop_Notes(NoteList &notes, uint &cache)
 
                         // Show note hit effect
                         if (chIter != mChannelList.end() && note->isDead()) {
-                            mNoteRankList[ point2i
-                                    ( getDrawRect(note->getKey(), 0).get_center().x
-                                    , mCurrentTick
-                                    )] = EJRank::AUTO;
+                            mNoteRankList[ point2i(getNotePoint(note->getKey(), 0).x, mCurrentTick) ] = EJRank::AUTO;
                             chIter->sprHit.restart();
                         }
                     }

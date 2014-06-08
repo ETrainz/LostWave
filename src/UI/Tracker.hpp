@@ -128,7 +128,8 @@ public:
     void process_input();
 
     ////    Depended by Note    ///////////////////////////////////////
-    rectf getDrawRect(ENKey const &key, long const &time) const;
+    rectf   getNoteRect (ENKey const &key, long const &time) const;
+    point2f getNotePoint(ENKey const &key, long const &time) const;
 
     ////    GUI Component Callbacks    ////////////////////////////////
     void render(clan::Canvas &canvas, recti const &clip_rect);

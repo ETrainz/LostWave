@@ -11,7 +11,7 @@ AscMetering::AscMetering(Afloat freq, Afloat decay)
     , mDecay(decay)
     , mPeak ({0.0f, 0.0f})
     , mRMS  ({0.0f, 0.0f})
-    , mdPeak({0.0f, 0.0f})
+    , mdOCI ({int16_t{0}, int16_t{0}})
     , mdRMS ({0.0f, 0.0f})
 {
 
@@ -51,8 +51,15 @@ void AscMetering::doBuffer(AfBuffer &buffer)
     mdRMS[0] = sqrt(mdRMS[0]);
     mdRMS[1] = sqrt(mdRMS[1]);
 
-    mdPeak[0] = std::max(mdPeak[0], mPeak[0]);
-    mdPeak[1] = std::max(mdPeak[1], mPeak[1]);
+    mdOCI[0] = ( mPeak[0] > 1.0f  ) ? 105 :
+               ( mdRMS[0] > 0.25f ) ? std::max(int16_t{60}, mdOCI[0]) : // ~ -24dB RMS
+                 mdOCI[0];
+    mdOCI[0] = ( mdOCI[0] > 0.25f ) ? mdOCI[0] - 1 : 0;
+    
+    mdOCI[1] = ( mPeak[1] > 1.0f  ) ? 105 :
+               ( mdRMS[1] > 0.25f ) ? std::max(int16_t{60}, mdOCI[1]) : // ~ -24dB RMS
+                 mdOCI[1];
+    mdOCI[1] = ( mdOCI[1] > 0.25f ) ? mdOCI[1] - 1 : 0;
 }
 
 }

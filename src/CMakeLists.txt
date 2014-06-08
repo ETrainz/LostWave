@@ -7,8 +7,8 @@ add_executable(LostWave
 	AudioManager.cpp AudioTrack.cpp InputManager.cpp
 	Chart.cpp Chart_BMS.cpp Chart_O2Jam.cpp Music.cpp MusicScanner.cpp
 	Chrono.cpp Measure.cpp Note.cpp
-    UI/Timer.cpp UI/TimerFPS.cpp
-    UI/SwitchButton.cpp
+	UI/Graph.cpp UI/Graph_Time.cpp UI/Graph_FrameRate.cpp
+	UI/SwitchButton.cpp
 	UI/Slider.cpp
 	UI/FFT.cpp
 	UI/Tracker.cpp

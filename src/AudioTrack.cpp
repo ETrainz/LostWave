@@ -195,34 +195,50 @@ AudioTrack::~AudioTrack() {
 ////    GUI Component Methods    //////////////////////////////////
 void AudioTrack::render(clan::Canvas &canvas, const recti &clip_rect)
 {
+    //  CONSTANTS
+    const auto _getMeterLEDColor = [] (awe::Aint const &x) -> clan::Colorf
+    {
+        /**/ if (x < 72) return clan::Colorf::green;
+        else if (x < 96) return clan::Colorf::orange;
+        else             return clan::Colorf::red;
+    };
+    
+    const auto _getOverclipColor = [] (awe::Aint const &x) -> clan::Colorf
+    {
+        /**/ if (x < 40) return clan::Colorf::green;
+        else if (x < 60) return clan::Colorf::orange;
+        else             return { 1.0f, 0.0f, 0.0f, (x > 100) ? 1.0f : 0.75f };
+    };
+
+    //  VARIABLES
     float mxVol;
 
     awe::Asintf mtPeak;
     awe::Asintf mtRMS;
-
-    float mScale = 2.0f; // 0 ~ -48dB... at 2px/dB. See UI/FFT.hpp
-    float mRange = -awe::dBFS_limit / mScale;
+    awe::Asintf mtOCI;
 
     {   //  Calculate metering
+        const float mScale = 2.0f;                      // Half-scale (because we took abs(-1.0f to -1.0f))
+        const float mRange = -awe::dBFS_limit / mScale;
+
+        auto _rescale_metering = [this, mRange, mScale] (float &x) {
+            x = 20.0f * log10(x);
+            x = (x == x) ? ( (x > -mRange) ? (x + mRange) : 0.0f) : 0.0f;
+            x *= mScale;
+        };
+
         awe::Asfloatf mtPeakf, mtRMSf;
 
-        std::lock_guard<std::mutex> o_lock(mTrack->getMutex());
+        awe::MutexLockGuard o_lock(mTrack->getMutex());
 
-        mxVol = mMixer->getVol() * 96.0f;
+        mxVol = mMixer->getVol() * -awe::dBFS_limit;
 
         mtPeakf = mMeter->getPeak();
         mtRMSf  = mMeter->getAvgRMS();
+        mtOCI   = mMeter->getOCI();
 
-        mtPeakf([this, mRange, mScale] (float &x) {
-                    x = 20.0f * log10(x);
-                    x = (x == x) ? ( (x > -mRange) ? (x + mRange) : 0.0f) : 0.0f;
-                    x *= mScale;
-                });
-        mtRMSf([this, mRange, mScale] (float &x) {
-                    x = 20.0f * log10(x);
-                    x = (x == x) ? ( (x > -mRange) ? (x + mRange) : 0.0f) : 0.0f;
-                    x *= mScale;
-                });
+        mtPeakf(_rescale_metering);
+        mtRMSf (_rescale_metering);
 
         mtPeak[0] = mtPeakf[0], mtPeak[1] = mtPeakf[1];
         mtRMS [0] = mtRMSf [0], mtRMS [1] = mtRMSf [1];
@@ -230,13 +246,17 @@ void AudioTrack::render(clan::Canvas &canvas, const recti &clip_rect)
 
     ////    DRAW    ///////////////////////////////////////////////////
 
+    const clan::Colorf clrMeterMarker = !this->mGCbtnMute.isOn()
+            ? clan::Colorf { 0.0f, 1.0f, 1.0f, 0.6f }
+            : clan::Colorf { 0.1f, 0.1f, 0.1f, 1.0f }
+            ;
+
     //  Component background
     canvas.fill_rect( recti(0, 0, get_size()), clan::Colorf::white );
 
     //  Mini mode
     if (this->mGCbtnToggleSize.isOn())
-    {
-        //  Meter Background
+    {   //  Meter Background
         canvas.fill_rect(
                 recti(kmoMeter, sizei(
                     kmWidth             - 2 * kmPadding,
@@ -245,42 +265,33 @@ void AudioTrack::render(clan::Canvas &canvas, const recti &clip_rect)
                 clan::Colorf::black
                 );
 
-        canvas.draw_line(
-                          kmoMeter.x, kmoMeter.y + 1 + mxVol,
-                kmWidth - kmoMeter.x, kmoMeter.y + 1 + mxVol,
-                clan::Colorf{ 0.0f, 1.0f, 1.0f, 0.6f }
-                );
-        canvas.draw_line(
-                kmWidth - kmoMeter.x - 1, kmoMeter.y + 1 + mxVol,
-                kmWidth - kmoMeter.x - 1, kmoMeter.y + 2 + mxVol,
-                clan::Colorf{ 0.0f, 1.0f, 1.0f, 0.6f }
-                );
-        canvas.draw_line(
-                kmWidth - kmoMeter.x, kmoMeter.y + 1 + mxVol,
-                kmWidth - kmoMeter.x, kmoMeter.y + 3 + mxVol,
-                clan::Colorf{ 0.0f, 1.0f, 1.0f, 0.6f }
-                );
-
-        //  Meter Bars
-        {
+        {   //  Meter Bars
             const int oT = kmoMeter.y + 1;
-
             const int  w = kmMeterSize.width;
+
+            //  Gain line
+            canvas.draw_line(
+                    kmoMeter.x          , kmoMeter.y + 1 + mxVol,
+                    kmWidth - kmoMeter.x, kmoMeter.y + 1 + mxVol,
+                    clrMeterMarker
+                    );
+            canvas.draw_line(
+                    kmWidth - kmoMeter.x - 1, kmoMeter.y + 1 + mxVol,
+                    kmWidth - kmoMeter.x - 1, kmoMeter.y + 2 + mxVol,
+                    clrMeterMarker
+                    );
+            canvas.draw_line(
+                    kmWidth - kmoMeter.x, kmoMeter.y + 1 + mxVol,
+                    kmWidth - kmoMeter.x, kmoMeter.y + 3 + mxVol,
+                    clrMeterMarker
+                    );
+
             const int oL = kmoMeter.x + 1;
             const int oR = oL + w + 1;
 
-            auto get_color = [] (awe::Aint const &x) -> clan::Colorf {
-                if (x < 64)
-                    return clan::Colorf::green;
-                if (x < 96)
-                    return clan::Colorf::orange;
-
-                return clan::Colorf::red;
-            };
-
             for(awe::Aint p = 0; p < 120; p += w+1)
             {
-                clan::Colorf cRMS  = get_color(p);
+                clan::Colorf cRMS  = _getMeterLEDColor(p);
                 clan::Colorf cPeak = { cRMS.r * 0.6f, cRMS.g * 0.6f, cRMS.b * 0.6f };
                 clan::Colorf cNone = { 0.1f, 0.1f, 0.1f };
 
@@ -299,12 +310,11 @@ void AudioTrack::render(clan::Canvas &canvas, const recti &clip_rect)
                     canvas.fill_rect(oR, oT+p, oR+w, oT+p+w, cNone);
             }
 
-            // TODO Implement audio overclip indicator
+            // TODO Implement audio overclip indicator for mini mode
         }
 
         return;
     }
-
     //  Large mode
 
     //  Draw component split line
@@ -312,42 +322,32 @@ void AudioTrack::render(clan::Canvas &canvas, const recti &clip_rect)
 
     //  Meter Background
     canvas.fill_rect(
-            recti(
-                koMeter,
-                sizei(
+            recti(koMeter, sizei(
                     2 * kPadding + 2 * kMeterSize.width + 1,
                     2 * kPadding + kMeterSize.height
                 )),
             clan::Colorf::black
             );
 
-    //  Gain line
-    canvas.draw_line(
-            koMeter.x + kmPadding                                      , koMeter.y + kPadding + mxVol,
-            koMeter.x + kmPadding + kPadding + kMeterSize.width * 2 + 1, koMeter.y + kPadding + mxVol,
-            clan::Colorf{ 0.0f, 1.0f, 1.0f, 0.6f }
-            );
 
     //  Meter Bars
     {
-        const int oT = kPadding + koMeter.y;
-
+        const int oT = kPadding + koMeter.y + 1;
         const int w  = kMeterSize.width;
+
+        //  Gain line
+        canvas.draw_line(
+                koMeter.x + kmPadding                       , oT + mxVol,
+                koMeter.x + kmPadding + kPadding + w * 2 + 1, oT + mxVol,
+                clrMeterMarker
+                );
+
         const int oL = koMeter.x + kPadding;
         const int oR = oL + w + 1;
 
-        auto get_color = [] (awe::Aint const &x) -> clan::Colorf {
-            if (x < 64)
-                return clan::Colorf::green;
-            if (x < 96)
-                return clan::Colorf::orange;
-
-            return clan::Colorf::red;
-        };
-
         for(awe::Aint p = 0; p < 120; p += w+1)
         {
-            clan::Colorf cRMS  = get_color(p);
+            clan::Colorf cRMS  = _getMeterLEDColor(p);
             clan::Colorf cPeak = { cRMS.r * 0.6f, cRMS.g * 0.6f, cRMS.b * 0.6f };
             clan::Colorf cNone = { 0.1f, 0.1f, 0.1f };
 
@@ -366,12 +366,28 @@ void AudioTrack::render(clan::Canvas &canvas, const recti &clip_rect)
                 canvas.fill_rect(oR, oT+p, oR+w, oT+p+w, cNone);
         }
 
-        // TODO Implement audio overclip indicator
+        //  ON / OFF indicator ( currently tied to mute )
+        canvas.fill_triangle(
+                point2f ( oL - 3, oT - 3 ), 
+                point2f ( oL + w, oT - 3 ), 
+                point2f ( oL + w, oT - 1 ), 
+                clrMeterMarker
+                );
+
+        canvas.fill_triangle(
+                point2f(oR    , oT-3 ), 
+                point2f(oR+w+4, oT-3 ), 
+                point2f(oR    , oT-1 ), 
+                clrMeterMarker
+                );
+
+        //  Overclip indicator
+        canvas.draw_line(oL-2, oT+121, oL+w  , oT+121, _getOverclipColor(mtOCI[0]));
+        canvas.draw_line(oR  , oT+121, oR+w+2, oT+121, _getOverclipColor(mtOCI[1]));
     }
 
-    //  Markers for Meter bar and Fader
-    {
-        // draw dB lines, y + 1 because of dBFS round up
+    {   //  Markers for Meter bar and Fader
+        //  draw dB lines, y + 1 because of dBFS round up
         int o = 4 * kPadding + 2 * kMeterSize.width + 1;
         int t = 1 + koMeter.y + kPadding;
 
@@ -420,7 +436,6 @@ void AudioTrack::mixer_value_changed()
 
 void AudioTrack::mute_toggled(bool mute)
 {
-    clan::Console::write_line("Toggling to %1", mute ? "MUTE" : "UNMUTE");
     awe::ArenderConfig config = mTrack->getConfig();
     config.quality = mute ? awe::ArenderConfig::Quality::MUTE : awe::ArenderConfig::Quality::DEFAULT;
     mTrack->setConfig(config);

@@ -26,7 +26,7 @@ private:
     Asfloatf    mRMS;   //!< Buffer root mean square
 
     // Decaying parameters
-    Asfloatf    mdPeak;
+    Asintf      mdOCI;  //!< Overclip indicator
     Asfloatf    mdRMS;
 
 public:
@@ -34,13 +34,13 @@ public:
 
     Asfloatf const &getPeak     () const { return mPeak; }
     Asfloatf const &getRMS      () const { return mRMS; }
-    Asfloatf const &getAvgPeak  () const { return mdPeak; }
+    Asintf   const &getOCI      () const { return mdOCI; }
     Asfloatf const &getAvgRMS   () const { return mdRMS; }
 
     void reset_state() override {
         mPeak  *= 0;
         mRMS   *= 0;
-        mdPeak *= 0;
+        mdOCI  *= 0;
         mdRMS  *= 0;
     }
     void doBuffer(AfBuffer &buffer) override;
