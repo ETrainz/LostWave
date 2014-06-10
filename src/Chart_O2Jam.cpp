@@ -508,12 +508,13 @@ void parseOMC (clan::File& file, bool isEncrypted, SampleMap& sample_map)
     {
         // parse WAV files
         // create new read buffer from offset
-        file.seek(WAV_Offset);
+        // file.seek(WAV_Offset); // See OMC header format footnotes in .hh file
+        // file.seek(headSize);   // This is redundant because we're already here.
 
         buffer = new uint8_t[WAV_PackSize];
         read = file.read(buffer, WAV_PackSize);
         if (read != (int)WAV_PackSize) {
-            fprintf(stderr, "[debug] Fatal OJM file read error.\n");
+            fprintf(stderr, "[fatal] Fatal OJM file read error.\n");
             delete[] buffer;
         }
 
@@ -530,13 +531,10 @@ void parseOMC (clan::File& file, bool isEncrypted, SampleMap& sample_map)
             pPtr += WAVhSize, i += WAVhSize;
             smplID++;
 
-
             std::string SampleName(pWAVHeader->name);
             SampleName.append(".wav");
 
-            /* Of all the things, why does it have to be a mangled header?
-             * FIXME: Figure out why this doesn't work most of the time
-             */
+            // Of all the things, why does it have to be a mangled header?
             uint16_t CodecFormat = pWAVHeader->fmt0_AudioFormat; // WAVE codec used
             uint16_t numChannels = pWAVHeader->fmt0_numChannels; // number of sample channels
             uint32_t SampleRate  = pWAVHeader->fmt0_SmplRate;    // samples per second (8000, 44100, etc.)
@@ -546,50 +544,81 @@ void parseOMC (clan::File& file, bool isEncrypted, SampleMap& sample_map)
 
             uint32_t SampleSize  = pWAVHeader->data_ChunkSize;   // size of actual sample data
 
-            // ignore empty samples
-            if (SampleSize > 0 || numChannels > 0)
-            {
-                // rip PCM data
-                std::vector<uint8_t> pSmplData(pPtr, pPtr + SampleSize);
+            char const * err = "c";
+            /** sanity check
+             *  "s" = skip
+             *  "w" = skip and print to stderr
+             *  "e" = corrupted; return immediately
+             **/ if (SampleSize == 0)
+                err = "sZero sample size.";
+            else if (numChannels == 0)
+                err = "sZero channels.";
+            else if (SampleSize + i > WAV_PackSize)
+                err = "eBad WAV data chunk size descriptor.";
+            else if (SampleRate > 192000)
+                err = "wSampling rate is over 192000 Hz.";
+            else if (FrameRate != numChannels * BitRate / 8)
+                err = "wInvalid block alignment.";
+            else if (ByteRate  != numChannels * BitRate / 8 * SampleRate)
+                err = "wInvalid byte rate.";
+
+            /****/ if (err[0] == 'c') {
+                // all ok
+            } else if (err[0] == 's') {
                 pPtr += SampleSize, i += SampleSize;
-
-                // decrypt data
-                if (isEncrypted) {
-                    decrypt_arrange(pSmplData);
-                    decrypt_accXOR (pSmplData);
-                }
-
-                // create WAVE file buffer
-                std::vector<uint8_t> poSmplData(SampleSize + 44);
-
-                WAV_Header* pWAVOutHead = (WAV_Header*)poSmplData.data();
-
-                pWAVOutHead->RIFF_ID   = 0x46464952; // "RIFF"
-                pWAVOutHead->RIFF_Size = SampleSize + 36;
-                pWAVOutHead->RIFF_fmt0 = 0x45564157; // "WAVE"
-
-                pWAVOutHead->fmt0_ID   = 0x20746d66; // "fmt "
-                pWAVOutHead->fmt0_Size = 16;
-                pWAVOutHead->fmt0_AudioFormat = CodecFormat;
-                pWAVOutHead->fmt0_numChannels = numChannels;
-                pWAVOutHead->fmt0_SmplRate  = SampleRate;
-                pWAVOutHead->fmt0_ByteRate  = ByteRate;
-                pWAVOutHead->fmt0_PlayRate  = FrameRate;
-                pWAVOutHead->fmt0_BitRate   = BitRate;
-
-                pWAVOutHead->data_ChunkID   = 0x61746164; // "data"
-                pWAVOutHead->data_ChunkSize = SampleSize;
-
-                // arrayCopy (pSmplData, 0, poSmplData, 44, SampleSize);
-                std::copy (pSmplData.begin(), pSmplData.begin() + SampleSize, poSmplData.begin() + 44);
-                // pass into WAVE stream
-                Sample* pSample = new Sample((char*)pSmplData.data(), SampleSize, SampleName.c_str());
-
-                if (pSample->getSource() == nullptr)
-                    fprintf(stderr, "[warn] Failed to load OMC WAV sample: %s\n", SampleName.c_str());
-                else
-                    sample_map[smplID] = pSample;
+                continue;
+            } else if (err[0] == 'w') {
+                fprintf(stderr, "[warn] Skipping WAV file (%s)\n", err + 1);
+                pPtr += SampleSize, i += SampleSize;
+                continue;
+            } else if (err[0] == 'e') {
+                fprintf(stderr, "[error] Skipping WAV section (%s)\n", err + 1);
+                break;
+            } else {
+                assert(false);
             }
+
+            // rip PCM data
+            std::vector<uint8_t> pSmplData;
+            pSmplData.insert(pSmplData.end(), &pPtr[0], &pPtr[SampleSize]);
+
+            // decrypt data
+            if (isEncrypted) {
+                decrypt_arrange(pSmplData);
+                decrypt_accXOR (pSmplData);
+            }
+
+            // create WAVE file buffer
+            std::vector<uint8_t> poSmplData;
+
+            WAV_Header WAVOutHead = 
+                    { .RIFF_ID   = 0x46464952           // "RIFF"
+                    , .RIFF_Size = SampleSize + 36
+                    , .RIFF_fmt0 = 0x45564157           // "WAVE"
+                    , .fmt0_ID   = 0x20746d66           // "fmt "
+                    , .fmt0_Size = 16
+                    , .fmt0_AudioFormat = CodecFormat
+                    , .fmt0_numChannels = numChannels
+                    , .fmt0_SmplRate  = SampleRate
+                    , .fmt0_ByteRate  = ByteRate
+                    , .fmt0_PlayRate  = FrameRate
+                    , .fmt0_BitRate   = BitRate
+                    , .data_ChunkID   = 0x61746164      // "data"
+                    , .data_ChunkSize = SampleSize
+                    };
+            uint8_t* pWAVOutHead = reinterpret_cast<uint8_t*>(&WAVOutHead);
+            poSmplData.insert(poSmplData.end(), pWAVOutHead, pWAVOutHead + sizeof(WAVOutHead));
+            poSmplData.insert(poSmplData.end(), pSmplData.begin(), pSmplData.begin() + SampleSize);
+
+            // pass into WAVE stream
+            Sample* pSample = new Sample((char*)poSmplData.data(), poSmplData.size(), SampleName.c_str());
+
+            if (pSample->getSource() == nullptr)
+                fprintf(stderr, "[warn] Failed to load OMC WAV sample: %s\n", SampleName.c_str());
+            else
+                sample_map[smplID] = pSample;
+
+            pPtr += SampleSize, i += SampleSize;
         }
 
         delete[] buffer;
