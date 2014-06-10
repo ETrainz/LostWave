@@ -508,8 +508,7 @@ void parseOMC (clan::File& file, bool isEncrypted, SampleMap& sample_map)
     {
         // parse WAV files
         // create new read buffer from offset
-        // file.seek(WAV_Offset); // See OMC header format footnotes in .hh file
-        // file.seek(headSize);   // This is redundant because we're already here.
+        file.seek(WAV_Offset);
 
         buffer = new uint8_t[WAV_PackSize];
         read = file.read(buffer, WAV_PackSize);
@@ -546,24 +545,25 @@ void parseOMC (clan::File& file, bool isEncrypted, SampleMap& sample_map)
 
             char const * err = "c";
             /** sanity check
-             *  "s" = skip
-             *  "w" = skip and print to stderr
-             *  "e" = corrupted; return immediately
+             *  "c" = All OK
+             *  "s" = Skip this WAV
+             *  "w" = Skip this WAV and print warning
+             *  "e" = Corrupted WAV header. Return immediately.
              **/ if (SampleSize == 0)
-                err = "sZero sample size.";
+                err = "sZero sample size";
             else if (numChannels == 0)
-                err = "sZero channels.";
+                err = "sZero channels";
             else if (SampleSize + i > WAV_PackSize)
-                err = "eBad WAV data chunk size descriptor.";
+                err = "eBad WAV data chunk size descriptor";
             else if (SampleRate > 192000)
-                err = "wSampling rate is over 192000 Hz.";
+                err = "wSampling rate is over 192000 Hz";
             else if (FrameRate != numChannels * BitRate / 8)
-                err = "wInvalid block alignment.";
+                err = "wInvalid block alignment";
             else if (ByteRate  != numChannels * BitRate / 8 * SampleRate)
-                err = "wInvalid byte rate.";
+                err = "wInvalid byte rate";
 
             /****/ if (err[0] == 'c') {
-                // all ok
+                // Everything is OK
             } else if (err[0] == 's') {
                 pPtr += SampleSize, i += SampleSize;
                 continue;
@@ -591,7 +591,7 @@ void parseOMC (clan::File& file, bool isEncrypted, SampleMap& sample_map)
             // create WAVE file buffer
             std::vector<uint8_t> poSmplData;
 
-            WAV_Header WAVOutHead = 
+            WAV_Header WAVOutHead =
                     { .RIFF_ID   = 0x46464952           // "RIFF"
                     , .RIFF_Size = SampleSize + 36
                     , .RIFF_fmt0 = 0x45564157           // "WAVE"

@@ -130,17 +130,10 @@ struct OMC_File_Header {
     uint32_t    signature   ;// "OMC" or "OJM"
     uint16_t    wavs        ;// Number of WAV files
     uint16_t    oggs        ;// Number of OGG files
-    uint32_t    wavs_addr   ;// Location of first WAV file ***
+    uint32_t    wavs_addr   ;// Location of first WAV file
     uint32_t    oggs_addr   ;// Location of first OGG file
     uint32_t    file_size   ;// OJM/OMC file size (including header)
 };
-// unknown [1]
-// [1] Unknown value.
-// It should be the address of first WAV sample, but in the Jamming Madness OMC
-// file it's specifies a value that corresponds to the padding between the end
-// of the WAV section and the beginning of the OGG section.
-// In that file the WAV headers are correct but libsndfile fails to identify
-// them.
 
 struct OMC_WAV_Header {
     char        name    [32]    ;// Sample name; always without extension
