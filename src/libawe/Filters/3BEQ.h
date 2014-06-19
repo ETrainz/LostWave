@@ -19,25 +19,35 @@
 namespace awe {
 namespace Filter {
 
-class Asc3BEQ : public AscFilter
+template< const Achan Channels >
+class TBEQ : public Afilter< Channels >
 {
 private:
     double mSF, mLF, mHF; //  Current sampling, low-pass and high-pass frequencies
 
-    AscIIR mLP;
-    AscIIR mHP;
+    IIR::IIR< Channels > mLP;
+    IIR::IIR< Channels > mHP;
 
     double mLG, mMG, mHG;
 
 public:
-    Asc3BEQ(
+    TBEQ(
         double mixfreq,
         double lo_freq = 880.0,
         double hi_freq = 5000.0,
         double lo_gain = 1.0,
         double mi_gain = 1.0,
         double hi_gain = 1.0
-    );
+    )   : mSF(mixfreq)
+        , mLF(lo_freq)
+        , mHF(hi_freq)
+        , mLP(IIR::newLPF(mSF, mLF))
+        , mHP(IIR::newHPF(mSF, mHF))
+        , mLG(lo_gain)
+        , mMG(mi_gain)
+        , mHG(hi_gain)
+    { }
+
 
     inline void reset_state()
     {
@@ -54,8 +64,8 @@ public:
     inline void set_freq(double mixfreq)
     {
         mSF = mixfreq;
-        mLP = AscIIR::newLPF(mSF, mLF);
-        mHP = AscIIR::newHPF(mSF, mHF);
+        mLP = IIR::newLPF(mSF, mLF);
+        mHP = IIR::newHPF(mSF, mHF);
     }
 
     inline void set_freq(double lo_freq, double hi_freq)
@@ -79,28 +89,32 @@ public:
         mHG = hi_gain;
     }
 
-    inline void doBuffer(AfBuffer &buffer) {
-        /****/ if (buffer.getChannelCount() == 0) {
-            return;
-        } else if (buffer.getChannelCount() == 1) {
-            std::for_each(
-                    buffer.begin(), buffer.end(),
-                    [this](Afloat &value) {
-                        value = this->ffdoL(value) + this->ffdoR(value);
-                        value = value / 2.0f;
-                    });
-        } else {
-            for(size_t i = 0; i < buffer.getFrameCount(); i += 1)
+    inline void doBuffer(AfBuffer &buffer)
+    {
+        assert(buffer.getChannelCount() == Channels);
+
+        for(size_t i = 0; i < buffer.getFrameCount(); i += 1)
+        {
+            Afloat* f = buffer.getFrame(i);
+            for(Achan c = 0; c < Channels; c += 1)
             {
-                Afloat* f = buffer.getFrame(i);
-                f[0] = ffdoL(f[0]);
-                f[1] = ffdoR(f[1]);
+                double L = f[c];
+                double H = f[c];
+
+                mLP.process(c, L);
+                mHP.process(c, H);
+
+                double M = f[c] - (L + H);
+
+                L *= mLG;
+                M *= mMG;
+                H *= mHG;
+
+                f[c] = static_cast<Afloat>(L + M + H);
             }
+
         }
     }
-
-    Afloat ffdoL(Afloat const &l);
-    Afloat ffdoR(Afloat const &r);
 
 };
 

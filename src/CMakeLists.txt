@@ -26,7 +26,5 @@ target_link_libraries(LostWave
 	${ClanLib_Display_LIBRARY}
 	${ClanLib_D3D_LIBRARY}
 	${ClanLib_GL_LIBRARY}
-	${ClanLib_CSSLayout_LIBRARY}
 	${ClanLib_GUI_LIBRARY}
-	${ClanLib_Network_LIBRARY}
 )

@@ -4,7 +4,7 @@
 #ifndef AWE_ENGINE_H
 #define AWE_ENGINE_H
 
-#include "aweTrack.h"
+#include "Sources/Track.h"
 #include "awePortAudio.h"
 
 namespace awe {
@@ -18,8 +18,8 @@ namespace awe {
 class AEngine
 {
 protected:
-    APortAudio  mOutputDevice;  //!< PortAudio output device wrapper
-    Atrack      mMasterTrack;   //!< Master output track
+    APortAudio      mOutputDevice;  //!< PortAudio output device wrapper
+    Source::Atrack  mMasterTrack;   //!< Master output track
 
 public:
     AEngine(
@@ -42,7 +42,7 @@ public:
      *  data from and then passes it into the audio output host.
      *  \return a reference to the master track object.
      */
-    inline Atrack& getMasterTrack() { return mMasterTrack; }
+    inline Source::Atrack& getMasterTrack() { return mMasterTrack; }
 
     /*! Pulls audio mix from master track and pushes them into the
      *  output device.

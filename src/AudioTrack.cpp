@@ -50,12 +50,12 @@ sizei AudioTrack::_getSize(bool mini) { return mini ? kmSize : kSize; }
 
 ////    AudioTrack class    ///////////////////////////////////////////
 AudioTrack::AudioTrack(
-    awe::Atrack        *source,
-    clan::GUIComponent *parent,
-    point2i             pos
+    awe::Source::Atrack* source,
+    clan::GUIComponent* parent,
+    point2i pos
 )   : clan::GUIComponent(parent, "AudioTrack")
     , mTrack(source)
-    , m3BEQ (new awe::Filter::Asc3BEQ(
+    , m3BEQ (new awe::Filter::TBEQ<2>(
                 mTrack->getConfig().targetSampleRate,
                 600.0, 8000.0, 1.0, 1.0, 1.0
                 ))
@@ -184,6 +184,7 @@ AudioTrack::AudioTrack(
 }
 
 AudioTrack::~AudioTrack() {
+    mTrack->getRack().detach_filter(3);
     mTrack->getRack().detach_filter(2);
     mTrack->getRack().detach_filter(1);
     mTrack->getRack().detach_filter(0);
@@ -202,7 +203,7 @@ void AudioTrack::render(clan::Canvas &canvas, const recti &clip_rect)
         else if (x < 96) return clan::Colorf::orange;
         else             return clan::Colorf::red;
     };
-    
+
     const auto _getOverclipColor = [] (awe::Aint const &x) -> clan::Colorf
     {
         /**/ if (x < 40) return clan::Colorf::green;
@@ -368,16 +369,16 @@ void AudioTrack::render(clan::Canvas &canvas, const recti &clip_rect)
 
         //  ON / OFF indicator ( currently tied to mute )
         canvas.fill_triangle(
-                point2f ( oL - 3, oT - 3 ), 
-                point2f ( oL + w, oT - 3 ), 
-                point2f ( oL + w, oT - 1 ), 
+                point2f ( oL - 3, oT - 3 ),
+                point2f ( oL + w, oT - 3 ),
+                point2f ( oL + w, oT - 1 ),
                 clrMeterMarker
                 );
 
         canvas.fill_triangle(
-                point2f(oR    , oT-3 ), 
-                point2f(oR+w+4, oT-3 ), 
-                point2f(oR    , oT-1 ), 
+                point2f(oR    , oT-3 ),
+                point2f(oR+w+4, oT-3 ),
+                point2f(oR    , oT-1 ),
                 clrMeterMarker
                 );
 

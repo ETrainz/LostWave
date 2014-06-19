@@ -11,14 +11,20 @@
 #include <algorithm>
 #include <array>
 #include <queue>
+#include <mutex>
 
 //! \brief The libawe namespace, where everything used by libawe resides in.
 namespace awe {
 
 //!@name Standard audio data types
 //!@{
-using Aint   = int16_t; //!< 16-bit integer data type
-using Afloat = float;   //!< Architecture-specific floating point data type
+using Aint   = int16_t;         //!< 16-bit integer data type
+using Afloat = float;           //!< Architecture-specific floating point data type
+
+using Achan  = unsigned char;   //!< Channel count data type.
+
+//! A friendlier alias for mutex lock guards.
+using MutexLockGuard = std::lock_guard<std::mutex>;
 //!@}
 
 //!@name Standard audio queue buffers
@@ -58,7 +64,10 @@ inline Aint to_Aint(const Afloat &v)
 //!@}
 
 //! Converts a normalized linear magnitude value (0.0f - 1.0f) to a full-scale decibel magnitude value
-inline Afloat to_dBFS(const Afloat &v) { return 20.0f * log10(v); }
+inline Afloat   to_dBFS(const Afloat &v) { return 20.0f * log10(v); }
+
+//! Converts a full-scale decibel magnitude value to a normalized linear magnitude value (0.0f - 1.0f)
+inline Afloat from_dBFS(const Afloat &v) { return std::pow(10.0f, v / 20.0f); }
 
 //! Smallest unit of representation for a 16-bit integer on a normalized floating point.
 static constexpr Afloat Afloat_limit = 1.0f / 65535.0f;

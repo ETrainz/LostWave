@@ -1,21 +1,20 @@
-//  aweTrack.h :: Sound mixing track
+//  Sources/Track.h :: Sound mixing track
 //  Copyright 2012 - 2014 Chu Chin Kuan <keigen.shu@gmail.com>
 
-#ifndef AWE_TRACK_H
-#define AWE_TRACK_H
+#ifndef AWE_SOURCE_TRACK_H
+#define AWE_SOURCE_TRACK_H
 
 #include <mutex>
 #include <string>
 #include <algorithm>
-#include "aweDefine.h"
-#include "aweBuffer.h"
-#include "aweSource.h"
-#include "Filters/Rack.h"
+#include "../aweDefine.h"
+#include "../aweBuffer.h"
+#include "../aweSource.h"
+#include "../Filters/Rack.h"
 
 namespace awe {
+namespace Source {
 
-//! A friendlier alias for mutex lock guards.
-using MutexLockGuard = std::lock_guard<std::mutex>;
 
 /*! Sound mixer class.
  *
@@ -238,6 +237,7 @@ public:
 };
 
 
+}
 }
 
 #endif

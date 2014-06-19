@@ -1,12 +1,13 @@
-//  awesndfile.h :: Audio file reader via libsndfile
+//  Sources/awesndfile.h :: Audio file reader via libsndfile
 //  Copyright 2012 - 2014 Chu Chin Kuan <keigen.shu@gmail.com>
 
-#ifndef AWE_SNDFILE_H
-#define AWE_SNDFILE_H
+#ifndef AWE_SOURCE_SNDFILE_H
+#define AWE_SOURCE_SNDFILE_H
 
 #include <sndfile.h>
 
 namespace awe {
+namespace Source {
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 //!@name Implementation code for sndfile virtual I/O methods
@@ -34,5 +35,6 @@ class Asample;
 void read_sndfile(Asample* sample, SNDFILE* SFsndfile, SF_INFO* info);
 
 };
+}
 
 #endif

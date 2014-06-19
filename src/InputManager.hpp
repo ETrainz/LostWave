@@ -59,12 +59,12 @@ public:
     bool try_unlock (const KeyCode& key);
 
 private:
-    clan::Slot cls_keyboard_keyup;
-    clan::Slot cls_keyboard_keydown;
-    clan::Slot cls_mouse_keyup;
-    clan::Slot cls_mouse_keydown;
-    clan::Slot cls_mouse_ptrmove;
-
     std::map<KeyCode, KeyStatus> keys;
+
+    clan::Callback<void(const clan::InputEvent &)> mCKeyUp;
+    clan::Callback<void(const clan::InputEvent &)> mCKeyDown;
+
+    void FKeyUp  (const clan::InputEvent &);
+    void FKeyDown(const clan::InputEvent &);
 };
 #endif

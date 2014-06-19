@@ -1,12 +1,13 @@
-//  awesndfile.cpp :: Audio file reader via libsndfile
-//  Copyright 2012 - 2013 Keigen Shu
+//  Sources/awesndfile.cpp :: Audio file reader via libsndfile
+//  Copyright 2012 - 2014 Chu Chin Kuan <keigen.shu@gmail.com>
 
 #include <exception>
 #include "awesndfile.h"
-#include "aweSample.h"
+#include "Sample.h"
 
 
 namespace awe {
+namespace Source {
 
 /* read data from SNDFILE into sample */
 void read_sndfile(Asample* sample, SNDFILE* sndf, SF_INFO* info)
@@ -181,4 +182,5 @@ Asample::Asample(
     return;
 }
 
+}
 }

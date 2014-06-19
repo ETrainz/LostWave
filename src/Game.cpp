@@ -14,7 +14,6 @@ Game::Game(clan::DisplayWindow &_clDW, clan::GUIManager &_clUI) :
     im  (clDW.get_ic())
 {
     func_input().set(this, &Game::process_input);
-    clDW.sig_window_close().connect(this, &Game::on_window_close);
     Note::am = &am;
     // TODO compile list of keys that would be used in the game and
     // notify InputManager to listen to these keys
@@ -50,7 +49,7 @@ bool Game::process_input(clan::InputEvent const &event)
 Game* Game::create(clan::DisplayWindowDescription &clDWD)
 {
     clan::DisplayWindow clDW(clDWD);
-    clan::GUIManager    clUI(clDW, "Theme");
+    clan::GUIManager    clUI(clDW);
 
     Game* game = new Game(clDW, clUI);
 

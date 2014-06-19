@@ -23,14 +23,14 @@ public:
 
 private:
     ////    Class callbacks    ////
-    clan::Callback_v1<bool> mfButtonStateChanged;
-    clan::Callback_v1<bool> mfProximityStateChanged;
+    clan::Callback<void(bool)> mfButtonStateChanged;
+    clan::Callback<void(bool)> mfProximityStateChanged;
 
 public:
     SwitchButton(clan::GUIComponent *parent);
 
     inline bool isOn() const { return Common::isOn(mButtonState); }
-    clan::Callback_v1<bool> &func_toggled() { return mfButtonStateChanged; }
+    clan::Callback<void(bool)> &func_toggled() { return mfButtonStateChanged; }
 
     ////    Class GUI callback listeners    ////
     void on_render(clan::Canvas &canvas, recti const &clipRect);

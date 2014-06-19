@@ -49,6 +49,9 @@ public:
     //! Channel popping ranking
     using I_NoteRank    = std::map  < point2i, EJRank >;
 
+    //! Beat markers
+    using I_BeatMark    = std::list < TTime >;
+
 private:
     ////    Judgement and Scoring    ///////////////////////////////////
     Judge           mJudge;
@@ -74,7 +77,7 @@ private:
     ChannelList     mChannelList;
 
     ////    Input Manager    ///////////////////////////////////////////
-    InputManager    mIM;
+    InputManager*   mIM;
 
 
     ////    Graphics    ///////////////////////////////////////////////
@@ -84,6 +87,7 @@ private:
 
     NoteList            mRenderList;
     I_NoteRank          mNoteRankList;
+    I_BeatMark          mBeatMarks;
 
     ////    Modifiers    ///////////////////////////////////////////////
     bool            mAutoPlay;

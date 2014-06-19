@@ -14,8 +14,7 @@
 #                          Otherwise, it will contain all ClanLib libraries found.
 #
 # For the components
-#   App, CSSLayout, Compute, Core, Database, Display, GL, GUI, GameIDE, Network,
-#   Physics2D, Physics3D, SWRender, Scene3D, Sound, Sqlite
+#   App, Core, Display, GL, GUI, SWRender
 #
 # the following variables are set:
 #   ClanLib_${COMPONENT}_LIBRARY - Full path to the component's library.
@@ -28,7 +27,7 @@ ENDIF(ClanLib_INCLUDE_DIRS)
 
 
 IF(NOT ClanLib_FIND_COMPONENTS)
-    SET(ClanLib_FIND_COMPONENTS  App GameIDE Network Sound  Display Scene3D GL SWRender CSSLayout GUI  Compute Physics2D Physics3D  Database Sqlite)
+    SET(ClanLib_FIND_COMPONENTS  App  Display GL SWRender GUI)
 ENDIF(NOT ClanLib_FIND_COMPONENTS)
 
 MACRO(ClanLib_MSG MSG)
@@ -111,19 +110,9 @@ MARK_AS_ADVANCED(
     ClanLib_INCLUDE_DIRS
     ClanLib_App_LIBRARY
     ClanLib_Core_LIBRARY
-    ClanLib_GameIDE_LIBRARY
-    ClanLib_Network_LIBRARY
-    ClanLib_Sound_LIBRARY
     ClanLib_Display_LIBRARY
-    ClanLib_Scene3D_LIBRARY
     ClanLib_GL_LIBRARY
     ClanLib_SWRender_LIBRARY
-    ClanLib_CSSLayout_LIBRARY
     ClanLib_GUI_LIBRARY
-    ClanLib_Compute_LIBRARY
-    ClanLib_Physics2D_LIBRARY
-    ClanLib_Physics3D_LIBRARY
-    ClanLib_Database_LIBRARY
-    ClanLib_Sqlite_LIBRARY
     )
 

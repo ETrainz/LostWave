@@ -36,7 +36,7 @@ Tracker::Tracker
 
     , mChannelList()
 
-    , mIM(this->get_ic())
+    , mIM(&game->im)
 
     , mT_Hit(   // #TODO Add this functionality into JSONReader
             this->get_canvas().get_gc(),
@@ -92,8 +92,8 @@ Tracker::Tracker
     for(auto &elem : mChannelList)
     {
         //  #HACK Bind mapping
-        mIM.try_lock    (elem.code);
-        mIM.try_unlock  (elem.code);
+        mIM->try_lock    (elem.code);
+        mIM->try_unlock  (elem.code);
 
         //  Create sprites
         elem.sprHit.add_gridclipped_frames(canvas, mT_Hit, 0, 0, 256, 256, 4, 3, 0, 0, 0);
@@ -168,7 +168,7 @@ point2f Tracker::getNotePoint(ENKey const &key, long const &time) const
     if (p.x == -1)
         return point2f { -1.0f, -1.0f };
     else
-        return point2f 
+        return point2f
             { static_cast<float>(p.x) * 24.0f + 12.0f
             , static_cast<float>(p.y) * mSpeedX
             };
@@ -195,24 +195,52 @@ void Tracker::render(clan::Canvas& canvas, const recti& clip_rect)
     float g = z - mSpeedX * (mJudge.cgetTP() + mJudge.cgetTC() + mJudge.cgetTG());
     float b = z - mSpeedX * (mJudge.cgetTP() + mJudge.cgetTC() + mJudge.cgetTG() + mJudge.cgetTB());
 
+    //  Draw background.
     canvas.fill_rect({0, 0, 168, z}, { 1.0f, 1.0f, 1.0f, 0.1f });
 
+    //  Draw judgement area.
     canvas.fill_rect({0, p, 168, z}, { 0.0f, 0.5f, 1.0f, 0.1f });
     canvas.fill_rect({0, c, 168, p}, { 0.0f, 1.0f, 0.5f, 0.1f });
     canvas.fill_rect({0, g, 168, c}, { 0.5f, 1.0f, 0.0f, 0.1f });
     canvas.fill_rect({0, b, 168, g}, { 1.0f, 0.5f, 0.0f, 0.1f });
 
     if (mClock->isTStopped())
-        canvas.fill_rect( { 0, 0, 168, z }, { 1.0f, 1.0f, 1.0f, 0.5f });
+    {   //  Invert chart area.
+        canvas.mult_scale       (1.f, -1.f, 1.f);
+        canvas.push_translate   (0.f, -static_cast<float>(get_height()), 0.f);
 
-    canvas.push_cliprect( get_geometry() );
+        //  Draw a brighter background.
+        canvas.fill_rect        ({ 0, 0, 168, z }, { 1.0f, 1.0f, 1.0f, 0.5f });
+    }
 
+    //  Clip beat-mark and note rendering
+    canvas.push_cliprect( recti { 0, get_geometry().top, get_geometry().get_size() } );
+
+    //  Render beat markers
+    for(TTime const &mark : mBeatMarks)
+    {
+        int p = mChart->compare_ticks(mTime, mark) * mSpeedX;
+        p = get_height() - p;
+
+        if (p < 0 || p > get_height()) continue;
+
+        canvas.draw_line(
+                0, p, 168, p, (mark.beat == 0)
+                ? clan::Colorf(.8f, .8f, .8f) // Measure mark
+                : clan::Colorf(.4f, .4f, .4f) // Beat mark
+                );
+    }
+
+    //  Render notes
     for(Note *note : mRenderList)
         note->render(*this, canvas);
 
     mRenderList.clear();
+
+    //  Stop clipping
     canvas.pop_cliprect();
-    {
+
+    {   //  Render note ranking pop-ups
         std::list<point2i> cl_NRL;
         for(auto pair : mNoteRankList)
         {
@@ -228,7 +256,7 @@ void Tracker::render(clan::Canvas& canvas, const recti& clip_rect)
             point2f pos (pair.first.x, pair.first.y);
 
             float z = static_cast<float>(mCurrentTick - pos.y) / static_cast<float>(mClock->getTicksPerMeasure() / 2);
-            if (z > 1.0f) {
+            if (z > 1.0f) { //  Remove if pop-up finished
                 cl_NRL.push_back(pair.first);
                 continue;
             }
@@ -238,20 +266,20 @@ void Tracker::render(clan::Canvas& canvas, const recti& clip_rect)
             mI_Hit_Rank[x].draw(canvas, { pos.x - mI_Hit_Rank[x].get_width() / 2 }, pos.y);
         }
 
-        for (auto elem : cl_NRL)
+        for(auto elem : cl_NRL)
             mNoteRankList.erase(mNoteRankList.find(elem));
 
         cl_NRL.clear();
     }
 
-
+    //  Draw channel lanes.
     for(auto &elem : mChannelList)
     {
         rectf rLane = getNoteRect(elem.key, 0);
         rLane.top       = 0;
         rLane.bottom    = get_height();
 
-        if (mIM.isOn(elem.code))
+        if (mIM->isOn(elem.code))
             canvas.fill_rect(rLane, elem.clrLaneKeyOn);
 
         rLane.top       = get_height();
@@ -285,6 +313,7 @@ void Tracker::update()
     if (mChartEnded == false)
     {
         mRenderList.clear();
+        mBeatMarks.clear();
 
         uint cache = mTime.measure;
         uint index = mMeasureIterStart;
@@ -303,6 +332,14 @@ void Tracker::update()
                 mClock->setTCSig(measure->getA(), measure->getB());
             }
 
+            // Generate beat markers
+            for(uint i = 0; i < measure->getA(); i += 1)
+            {
+                TTime T ( 0, i, index );
+                if (T >= mTime) { mBeatMarks.push_back( T ); }
+            }
+
+
             loop_Params(measure->getParams());
             loop_Notes (measure->getNotes (), cache);
 
@@ -319,7 +356,7 @@ void Tracker::update()
         if (elem.note == nullptr) continue;
 
         // Update note.
-        elem.note->update(*this, mIM.getKey(elem.code));
+        elem.note->update(*this, mIM->getKey(elem.code));
         if (elem.note->isScored())
         {
             // Update scoring statistics
@@ -341,8 +378,8 @@ void Tracker::update()
 
     // Lock pressed keys whether or not the player hit a note.
     for(auto &elem : mChannelList) {
-        if (mIM.isOn(elem.code))
-            mIM.try_lock(elem.code);
+        if (mIM->isOn(elem.code))
+            mIM->try_lock(elem.code);
     }
 
     // Calculate max combo
@@ -437,7 +474,7 @@ void Tracker::loop_Notes(NoteList &notes, uint &cache)
 }
 
 void Tracker::process_input() {
-    if (mIM.try_lock(clan::InputCode::keycode_f11)) {
+    if (mIM->try_lock(clan::InputCode::keycode_f11)) {
         mAutoPlay = !mAutoPlay;
     }
 }

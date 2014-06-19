@@ -1,9 +1,10 @@
-//  aweSample.cpp :: Sound sample class
+//  Sources/Sample.cpp :: Sound sample class
 //  Copyright 2012 - 2014 Chu Chin Kuan <keigen.shu@gmail.com>
 
-#include "aweSample.h"
+#include "Sample.h"
 
 namespace awe {
+namespace Source {
 
 Asample::Asample(
     AiBuffer*   const &_source,
@@ -134,4 +135,5 @@ size_t Asample::skip(const size_t &pos, const bool &skip_silence)
     return j;
 }
 
+}
 }

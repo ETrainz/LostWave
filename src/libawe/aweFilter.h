@@ -12,14 +12,17 @@ namespace awe {
 /* Define namespace for filters */
 namespace Filter {}
 
-/*! Stereo audio filter interface.
+/*! Audio filter interface.
  *  This class serves as an interface to all audio filtering objects.
  */
-class AscFilter
+template< Achan Channels >
+class Afilter
 {
 public:
+    static constexpr Achan _channels = Channels;
+
     //! Virtual destructor
-    virtual ~AscFilter() { }
+    virtual ~Afilter() { }
 
     //! Resets the filter to its initial state.
     virtual void reset_state() = 0;
@@ -28,7 +31,9 @@ public:
      *  @param[in,out] buffer buffer to filter through
      */
     virtual void doBuffer(AfBuffer &buffer) = 0;
-
 };
+
+using AscFilter = Afilter<2>;
+
 }
 #endif

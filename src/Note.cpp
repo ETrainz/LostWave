@@ -152,7 +152,7 @@ void Note_Long::render(UI::Tracker const &tracker, clan::Canvas &canvas) const
     clan::Colorf body, head;
 
     if (mBScore.rank == EJRank::AUTO) {
-        body = head = clan::Colorf::gold;
+        body = head = clan::Colorf::purple;
         body.a = 0.8f;
     } else if (mBScore.rank == EJRank::MISS || mEScore.rank == EJRank::MISS) {
         body = head = clan::Colorf::red;

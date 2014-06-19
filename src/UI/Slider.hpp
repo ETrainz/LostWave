@@ -25,7 +25,7 @@ private:
     int mMax;   /// The upper limit of the range of the slider
     int mValue; /// Current value of the slider.
 
-    clan::Callback_v0 mfValueChanged;
+    clan::Callback<void()> mfValueChanged;
 
     ////    Slider Thumb state variables    ////
 
@@ -50,7 +50,7 @@ public:
     }
 
     ////    Class interaction callback    ////
-    inline clan::Callback_v0& func_value_changed() { return mfValueChanged; }
+    inline clan::Callback<void()>& func_value_changed() { return mfValueChanged; }
 
     ////    Class GUI callback listeners    ////
     void on_render(clan::Canvas &canvas, recti const &clipRect);

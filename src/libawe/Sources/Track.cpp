@@ -1,9 +1,10 @@
-//  aweTrack.cpp :: Sound mixing track
+//  Sources/Track.cpp :: Sound mixing track
 //  Copyright 2012 - 2013 Keigen Shu
 
-#include "aweTrack.h"
+#include "Track.h"
 
 namespace awe {
+namespace Source {
 
 void Atrack::fpull(Asource* src)
 {
@@ -70,4 +71,5 @@ void Atrack::render(AfBuffer &targetBuffer, const ArenderConfig &targetConfig)
     }
 }
 
+}
 }

@@ -1,14 +1,15 @@
-//  aweSample.h :: Sound sample class
-//  Copyright 2012 - 2013 Keigen Shu
+//  Sources/Sample.h :: Sound sample class
+//  Copyright 2012 - 2014 Chu Chin Kuan <keigen.shu@gmail.com>
 
-#ifndef AWE_SAMPLE_H
-#define AWE_SAMPLE_H
+#ifndef AWE_SOURCE_SAMPLE_H
+#define AWE_SOURCE_SAMPLE_H
 
-#include "aweLoop.h"
-#include "aweSource.h"
-#include "Filters/Mixer.h"
+#include "../aweLoop.h"
+#include "../aweSource.h"
+#include "../Filters/Mixer.h"
 
 namespace awe {
+namespace Source {
 
 class Asample : public Asource
 {
@@ -165,6 +166,7 @@ public:
     }
 };
 
+}
 }
 
 #endif

@@ -5,18 +5,12 @@
 
 namespace awe {
 namespace Filter {
+namespace IIR {
 
 
-AscIIR::AscIIR(std::array<double, 6> k) noexcept
-    : mB ({k[0], k[1], k[2]})
-    , mA ({k[3], k[4], k[5]})
-    , mZl({0,0})
-    , mZr({0,0})
-{}
-
-std::array<double, 6> AscIIR::newLPF(const double rate, const double freq) noexcept
+Coeffs newLPF(const double rate, const double freq) noexcept
 {
-    std::array<double, 6> k;
+    Coeffs k;
 
     const double n = 1.0 / tan(M_PI * freq / rate);
     const double c = 1.0 / (1.0 + sqrt(2.0)*n + n*n);
@@ -28,22 +22,18 @@ std::array<double, 6> AscIIR::newLPF(const double rate, const double freq) noexc
     k[4] = c * 2.0 * (1.0 - n*n);
     k[5] = c *(1.0 - sqrt(2.0)*n + n*n);
 
-    k[0] /= k[3];
-    k[1] /= k[3];
-    k[2] /= k[3];
-    k[4] /= k[3];
-    k[5] /= k[3];
-
-    for(double& x : k)
-        if (!(x == x))
-            x = 0;
+    k[0] /= k[3]; k[0] = (k[0] == k[0]) ? k[0] : 0;
+    k[1] /= k[3]; k[1] = (k[1] == k[1]) ? k[1] : 0;
+    k[2] /= k[3]; k[2] = (k[2] == k[2]) ? k[2] : 0;
+    k[4] /= k[3]; k[4] = (k[4] == k[4]) ? k[4] : 0;
+    k[5] /= k[3]; k[5] = (k[5] == k[5]) ? k[5] : 0;
 
     return k;
 }
 
-std::array<double, 6> AscIIR::newHPF(const double rate, const double freq) noexcept
+Coeffs newHPF(const double rate, const double freq) noexcept
 {
-    std::array<double, 6> k;
+    Coeffs k;
 
     const double n = tan(M_PI * freq / rate);
     const double c = 1.0 / (1.0 + sqrt(2.0)*n + n*n);
@@ -55,24 +45,20 @@ std::array<double, 6> AscIIR::newHPF(const double rate, const double freq) noexc
     k[4] = c *  2.0 * (n*n - 1.0);
     k[5] = c * (1.0 - sqrt(2.0)*n + n*n);
 
-    k[0] /= k[3];
-    k[1] /= k[3];
-    k[2] /= k[3];
-    k[4] /= k[3];
-    k[5] /= k[3];
-
-    for(double& x : k)
-        if (!(x == x))
-            x = 0;
+    k[0] /= k[3]; k[0] = (k[0] == k[0]) ? k[0] : 0;
+    k[1] /= k[3]; k[1] = (k[1] == k[1]) ? k[1] : 0;
+    k[2] /= k[3]; k[2] = (k[2] == k[2]) ? k[2] : 0;
+    k[4] /= k[3]; k[4] = (k[4] == k[4]) ? k[4] : 0;
+    k[5] /= k[3]; k[5] = (k[5] == k[5]) ? k[5] : 0;
 
     return k;
 }
 
-void AscIIR::process(
-        const std::array<double, 3>& b,
-        const std::array<double, 3>& a,
-        std::array<double, 2>& z,
-        double& x
+void process_one
+        ( PartialCoeffs const & b
+        , PartialCoeffs const & a
+        , DelayLine & z
+        , double & x
         ) noexcept
 {
     const double  y = x * b[0] + z[0];
@@ -89,5 +75,7 @@ void AscIIR::process(
     x = y;
 }
 
+
+}
 }
 }

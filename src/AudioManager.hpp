@@ -11,15 +11,15 @@
 #include <atomic>
 
 #include "libawe/aweEngine.h"
-#include "libawe/aweSample.h"
-#include "libawe/aweTrack.h"
+#include "libawe/Sources/Sample.h"
+#include "libawe/Sources/Track.h"
 
 #include "__zzCore.hpp"
 
-using Sample        = awe::Asample;
+using Sample        = awe::Source::Asample;
 using SampleMap     = std::map<ulong, Sample*>;
 
-using Track         = awe::Atrack;
+using Track         = awe::Source::Atrack;
 using TrackMap      = std::map<uchar, Track*>;
 
 using VoiceMap      = std::map<Sample*, Track*>;
@@ -36,14 +36,14 @@ using VoiceMapNode  = VoiceMap::value_type;
 class AudioManager : public awe::AEngine
 {
 private:
-    std::mutex                  mMutex;         /// Sample and thread map mutex
-    std::vector< std::thread* > mThreads;       /// Threads relying on this.
-    ulong                       mUpdateCount;   /// Update sync counter
-    std::atomic_flag            mRunning;       /// Thread continuation flag
+    std::mutex                  mMutex;         //!< Sample and thread map mutex
+    std::vector< std::thread* > mThreads;       //!< Threads relying on this.
+    ulong                       mUpdateCount;   //!< Update sync counter
+    std::atomic_flag            mRunning;       //!< Thread continuation flag
 
-    SampleMap       mSampleMap; /// Maps a Chart specific sample ID to it's sample object.
-    TrackMap        mTrackMap;  /// Maps an ID to a track.
-    VoiceMap        mVoiceMap;  /// Maps a sample to it's render destination.
+    SampleMap       mSampleMap; //!< Maps a Chart specific sample ID to it's sample object.
+    TrackMap        mTrackMap;  //!< Maps an ID to a track.
+    VoiceMap        mVoiceMap;  //!< Maps a sample to it's render destination.
 
 public:
     /**

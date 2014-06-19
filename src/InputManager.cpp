@@ -45,17 +45,17 @@ bool InputManager::try_unlock(const KeyCode& key)
 }
 
 
-static void CLIDCallback_KeyUp  (const clan::InputEvent& event, InputManager* im) { im->turn_off(event.id); }
-static void CLIDCallback_KeyDown(const clan::InputEvent& event, InputManager* im) { im->turn_on (event.id); }
-static void CLIDCallback_PtrMove(const clan::InputEvent&, InputManager*) {}
+void InputManager::FKeyUp  (const clan::InputEvent& event) { this->turn_off(event.id); }
+void InputManager::FKeyDown(const clan::InputEvent& event) { this->turn_on (event.id); }
 
 InputManager::InputManager(clan::InputContext clIC)
+:   mCKeyUp  (this, &InputManager::FKeyUp)
+,   mCKeyDown(this, &InputManager::FKeyDown)
 {
-    cls_keyboard_keyup   = clIC.get_keyboard().sig_key_up  ().connect(&CLIDCallback_KeyUp, this);
-    cls_keyboard_keydown = clIC.get_keyboard().sig_key_down().connect(&CLIDCallback_KeyDown, this);
-    // cls_mouse_keyup      = clIC.get_mouse().sig_key_up  ().connect(&CLIDCallback_KeyUp, this);
-    // cls_mouse_keydown    = clIC.get_mouse().sig_key_down().connect(&CLIDCallback_KeyDown, this);
-    cls_mouse_ptrmove    = clIC.get_mouse().sig_pointer_move().connect(&CLIDCallback_PtrMove, this);
+    clIC.get_keyboard().sig_key_up  ().connect(mCKeyUp);
+    clIC.get_keyboard().sig_key_down().connect(mCKeyDown);
+    // clIC.get_mouse().sig_key_up  ().connect(&CLIDCallback_KeyUp, this);
+    // clIC.get_mouse().sig_key_down().connect(&CLIDCallback_KeyDown, this);
 
     // Create used keys in map
     try_lock(clan::keycode_escape);
@@ -67,4 +67,7 @@ InputManager::InputManager(clan::InputContext clIC)
 }
 
 InputManager::InputManager(clan::GUIComponent *clUIC) : InputManager(clUIC->get_ic())
-{ }
+{
+    mCKeyUp  .clear();
+    mCKeyDown.clear();
+}

@@ -12,6 +12,14 @@
             "bars": 512,
             "fade": 2,
             "window": "Hanning"
+        },
+
+        "maximizer": {
+            "boost"         :  0.0,
+            "threshold"     : -1.0,
+            "peak-release"  :  1,
+            "slow-release"  :  200,
+            "ceiling"       :  1.0
         }
     },
     "gui": {

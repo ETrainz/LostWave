@@ -6,7 +6,7 @@
 
 #include <ClanLib/gui.h>
 #include "__zzCore.hpp"
-#include "libawe/aweTrack.h"
+#include "libawe/Sources/Track.h"
 #include "libawe/Filters/3BEQ.h"
 #include "libawe/Filters/Mixer.h"
 #include "libawe/Filters/Metering.h"
@@ -18,9 +18,9 @@
 class AudioTrack : public clan::GUIComponent
 {
 private:
-    awe::Atrack                 *mTrack;
+    awe::Source::Atrack         *mTrack;
 
-    awe::Filter::Asc3BEQ        *m3BEQ;
+    awe::Filter::TBEQ<2>        *m3BEQ;
     awe::Filter::AscMixer       *mMixer;
     awe::Filter::AscMetering    *mMeter;
 
@@ -40,14 +40,17 @@ private:
 
 public:
     AudioTrack(
-        awe::Atrack        *source,
-        clan::GUIComponent *parent,
-        point2i             area
+        awe::Source::Atrack *source,
+        clan::GUIComponent  *parent,
+        point2i              area
     );
 
     ~AudioTrack();
 
     static sizei _getSize(bool mini = false);
+
+    awe::Source::Atrack       *  getTrack()       { return mTrack; }
+    awe::Source::Atrack const * cgetTrack() const { return mTrack; }
 
     ////    GUI Component Methods    //////////////////////////////////
     void render(clan::Canvas &canvas, const recti &clip_rect);

@@ -13,6 +13,7 @@
 #include "UI/FFT.hpp"
 #include "UI/Tracker.hpp"
 
+#include "UI/Graph.hpp"
 #include "UI/Graph_Time.hpp"
 #include "UI/Graph_FrameRate.hpp"
 
@@ -43,13 +44,18 @@ static void autoVisualize(
     , UI::FFT* FFTbg
     , UI::FFT* FFTp1
     , UI::FFT* FFTp2
-    , UI::Graph_Time* graph
+    , UI::Graph_Time*   graph
+    , std::vector<UI::Graph*>   graph_m
 ) {
 #if !( defined(_WIN32) || defined(_WIN64) )
     pthread_setname_np(pthread_self(), "Audio VFX");
 #endif
 
     ulong count = 0;
+    awe::Filter::Maximizer<2> *pMaxer =
+            reinterpret_cast< awe::Filter::Maximizer< 2 >* >(
+                am->getMasterTrack().getRack().getFilter(3)
+            );
 
     while(am->getRunning().test_and_set())
     {
@@ -62,6 +68,10 @@ static void autoVisualize(
                 FFTp1->update_2(am->getTrackMap()->at(1)->getOutput());
                 FFTp2->update_2(am->getTrackMap()->at(2)->getOutput());
                 graph->set_time(new_count - count);
+
+                graph_m[0]->set_next(-awe::dBFS_limit / pMaxer->getCurrentGain());
+                graph_m[1]->set_next(-awe::dBFS_limit * pMaxer->getThreshold());
+                graph_m[2]->set_next(-awe::dBFS_limit * pMaxer->getPeakSample());
                 count = new_count;
             }
             am->getMutex().unlock();
@@ -166,6 +176,24 @@ int App::main(std::vector<std::string> const& args)
                     FFTbars, FFTfade, FFTwindow
                     );
 
+            std::vector<UI::Graph*> graphMG;
+
+            graphMG.push_back(new UI::Graph(game,
+                    clan::Colorf {1.0f, 1.0f, 1.0f, 0.6f},
+                    clan::Colorf {1.0f, 1.0f, 1.0f, 0.8f},
+                    UI::Graph::PlotType::LINE
+                    ));
+            graphMG.push_back(new UI::Graph(game,
+                    clan::Colorf {1.0f, 0.0f, 1.0f, 0.4f},
+                    clan::Colorf {1.0f, 0.0f, 1.0f, 0.6f},
+                    UI::Graph::PlotType::POINT
+                    ));
+            graphMG.push_back(new UI::Graph(game,
+                    clan::Colorf {0.0f, 1.0f, 1.0f, 0.2f},
+                    clan::Colorf {0.0f, 1.0f, 1.0f, 0.4f},
+                    UI::Graph::PlotType::BAR
+                    ));
+
             UI::Graph_Time* graphAE = new UI::Graph_Time(
                     game,
                     clan::Colorf { 1.0f, 0.8f, 0.0f, 0.6f },
@@ -177,8 +205,45 @@ int App::main(std::vector<std::string> const& args)
             AudioTrack* ATP1 = new AudioTrack(game->am.getTrackMap()->at(1), game, point2i{ 700, game->get_height() - AudioTrack::_getSize().height });
             AudioTrack* ATP2 = new AudioTrack(game->am.getTrackMap()->at(2), game, point2i{ 750, game->get_height() - AudioTrack::_getSize().height });
 
+            {   // Set-up Master Output Maximizer
+                float MOMBoost = config.get_if_else_set(
+                        &JSONReader::getDecimal, "audio.maximizer.boost"       , 0.0,
+                        [](double const & value) -> bool {
+                            return value > 0.0;
+                        });
+                float MOMThreshold = config.get_if_else_set(
+                        &JSONReader::getDecimal, "audio.maximizer.threshold"   , -3.0,
+                        [](double const & value) -> bool {
+                            return value < 0.0;
+                        });
+                int MOMPeakRelease = config.get_if_else_set(
+                        &JSONReader::getInteger, "audio.maximizer.peak-release", 4,
+                        [](int const & value) -> bool {
+                            return value > 0;
+                        });
+                int MOMSlowRelease = config.get_if_else_set(
+                        &JSONReader::getInteger, "audio.maximizer.slow-release", 400,
+                        [](int const & value) -> bool {
+                            return value > 0;
+                        });
+                float MOMCeiling = config.get_if_else_set(
+                        &JSONReader::getDecimal, "audio.maximizer.ceiling"     , 3.0,
+                        [](double const & value) -> bool {
+                            return value > awe::dBFS_limit && value < 3.0;
+                        });
+
+                ATPM->getTrack()->getRack().attach_filter(new awe::Filter::Maximizer<2>(
+                        ATPM->getTrack()->getConfig().targetSampleRate / 2,
+                        awe::from_dBFS(MOMBoost),
+                        awe::from_dBFS(MOMThreshold),
+                        MOMSlowRelease,
+                        MOMPeakRelease,
+                        awe::from_dBFS(MOMCeiling)
+                        ));
+            }
+
             std::thread* av_thread = new std::thread(
-                    autoVisualize, &game->am, FFTbg, FFTp1, FFTp2, graphAE
+                    autoVisualize, &game->am, FFTbg, FFTp1, FFTp2, graphAE, graphMG
                     );
             game->am.attach_thread(av_thread);
         }
@@ -194,7 +259,7 @@ int App::main(std::vector<std::string> const& args)
             // TODO read other parameters
             for(size_t a = 1; a < args.size(); a++)
             {
-                if (clan::PathHelp::get_extension(args[a]).compare("ojn") == 0) 
+                if (clan::PathHelp::get_extension(args[a]).compare("ojn") == 0)
                 {
                     Music* music = O2Jam::openOJN(args[a]);
                     launchChart(music->charts[0]);
@@ -274,4 +339,4 @@ void App::launchChart(Chart* chart)
     tracker.exec ();
 }
 
-// kate: indent-mode cstyle; indent-width 4; replace-tabs on; 
+// kate: indent-mode cstyle; indent-width 4; replace-tabs on;
