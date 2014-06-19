@@ -1,4 +1,4 @@
-//  Filters/Maximizer.h :: Basic mixer filter
+//  Filters/Maximizer.h :: Audio signal maximizer
 //  Copyright 2014 Chu Chin Kuan <keigen.shu@gmail.com>
 
 #ifndef AWE_FILTER_MAXIMIZER_H
@@ -9,14 +9,12 @@
 namespace awe {
 namespace Filter {
 
-//! Calculates differential for `a` to `b` for time period `t` from data sampled
-//! at a sampling rate of `f`. Here it is used to calculate the decay slope.
-inline float calc_diff(float a, float b, float t, float f) {
-    return (a - b) / (t * f);
-}
-
-/** The libawe Maximizer.
- *  A simple hard-limiter that boosts and limits audio signals.
+/** A simple hard-limiter that boosts and limits audio signals.
+ *
+ *  This filter boosts the input audio signal and then passes it through a hard
+ *  limiter, which limits the audio signal to the specified loudness threshold.
+ *  The limiter release is softened as it falls back under the threshold to
+ *  reduce the harsh-sounding effect on plain hard-clipping filters.
  */
 template< const Achan Channels >
 class Maximizer : public Afilter< Channels >
@@ -35,6 +33,16 @@ private:
 
     ////    Metering attributes    ////
     Afloat      mPeakSample;    //<! Peak sample on last update
+
+private:
+    /** Decay rate calculator.
+     *
+     *  Calculates the small difference from `a` to `b` for the time period `t`
+     *  from the data sampled at a sampling rate of `f`.
+     */
+    static inline float calc_diff(float a, float b, float t, float f) {
+        return (a - b) / (t * f);
+    }
 
 public:
     //! Default constructor.
@@ -56,7 +64,7 @@ public:
         , mPeakSample   (0.0f)
     { }
 
-    //! Resets the limiter state of the maximizer.
+    //! Resets the limiter state in the maximizer.
     inline void reset_state() override {
         mDecayRate  = 0.0f;
         mGain       = 1.0f;
@@ -78,6 +86,9 @@ public:
     inline Afloat getCurrentGain() const { return mGain; }
     inline Afloat getPeakSample () const { return mPeakSample; }
 
+    /** Performs maximization on the audio buffer.
+     *  \param buffer The audio buffer to filter.
+     */
     void doBuffer(AfBuffer &buffer) override
     {
         assert(buffer.getChannelCount() == Channels);
@@ -95,13 +106,14 @@ public:
                 framePeak = std::max(framePeak, std::abs(frame[c]));
             }
 
+            //  Get peak value on this filter run.
             mPeakSample = std::max(mPeakSample, framePeak);
 
-            //  Current peak is over threshold
+            //  Current peak is over threshold.
             if (framePeak > mThreshold) {
                 Afloat newGain = framePeak / mThreshold;
 
-                //  Reset decay rate if higher limiting
+                //  Reset decay rate if higher limiting.
                 if (newGain > mGain) {
                     mGain = newGain;
                     mDecayRate = ( (framePeak > 1.0f)
@@ -111,20 +123,24 @@ public:
                 }
             }
 
+            //  Apply limiter.
             for(Achan c = 0; c < Channels; c += 1)
                 frame[c] *= mCeiling / mGain;
 
+            //  Apply limiter release.
             if (mGain > 1.0f / mThreshold)
-            {
+            {   //  Limiter level is above peak limit.
                 mGain = mGain - mDecayRate;
-                //  Switch to slow release if limiter gain has reached threshold.
+
+                //  Switch to slow release if limiter level has gone below peak limit.
                 if (mGain < 1.0f / mThreshold)
                     mDecayRate = calc_diff(1.0f, mThreshold, mSlowRelease / 1000.0f, mFrameRate);
 
             } else if (mGain > 1.0f) {
+                //  Limiter level is above threshold.
                 mGain = mGain - mDecayRate;
             } else {
-                //  Limiter gain is below threshold.
+                //  Limiter level is below threshold.
                 mGain = 1.0f;
             }
         }

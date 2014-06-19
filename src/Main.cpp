@@ -18,6 +18,8 @@
 #include "UI/Graph_FrameRate.hpp"
 
 #include "AudioTrack.hpp"
+#include "libawe/Filters/Maximizer.h"
+
 #include "MusicScanner.hpp"
 #include "Chart_O2Jam.hpp"
 #include "Chart_BMS.hpp"

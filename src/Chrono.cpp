@@ -66,13 +66,20 @@ void TClock::resetClock (double BPM, bool startNow)
     currTTime.reset();
     nextTTime.reset();
 
+    // #HACK to allow processing of parameter events on 0:0:0.
+    //
+    // The clock update function only checks the interrupt AFTER ticking once in
+    // the do-while loop, so the clock is not guaranteed to return at 0:0:0.
+    // This causes the tracker to ignore parameter events placed on 0:0:0.
+    currTTime.tick = -1;
+
     tct_mstt = tmp_mspt;
 
     tpt_Music = tpt_LastRun = tpt_Segment = sysClock::now();
 }
 
 // Update clock. Returns false if interrupted.
-bool TClock::update ()
+bool TClock::update()
 {
     if (isTicking) {
         const sysTimeP tpt_now = sysClock::now();
